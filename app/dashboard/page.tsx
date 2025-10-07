@@ -470,7 +470,6 @@ export default function DashboardPage() {
           {/* Collapsible Filter Content */}
           <Collapse in={filtersExpanded}>
             <Box sx={{ p: { xs: 1.5, sm: 2 }, pt: 0 }}>
-
               <Box
                 sx={{
                   display: 'flex',
