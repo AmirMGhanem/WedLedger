@@ -20,9 +20,13 @@ import {
   FormControl,
   InputLabel,
   FormHelperText,
+  Chip,
+  Autocomplete,
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
-import { supabase, FamilyMember } from '@/lib/supabase';
+import CallMadeIcon from '@mui/icons-material/CallMade';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import { supabase, FamilyMember, EventType, GiftType } from '@/lib/supabase';
 import AppLayout from '@/components/AppLayout';
 
 const CURRENCIES = [
@@ -46,6 +50,8 @@ export default function AddGiftPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -54,6 +60,10 @@ export default function AddGiftPage() {
     currency: 'USD',
     recipientName: '',
     giftFrom: '', // family member ID
+    direction: 'given' as 'given' | 'received',
+    eventType: '',
+    giftType: '',
+    notes: '',
   });
 
   useEffect(() => {
@@ -64,24 +74,41 @@ export default function AddGiftPage() {
 
   useEffect(() => {
     if (user) {
-      loadFamilyMembers();
+      loadAllData();
     }
   }, [user]);
 
-  const loadFamilyMembers = async () => {
+  const loadAllData = async () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name', { ascending: true });
+      const [familyResult, eventResult, giftTypeResult] = await Promise.all([
+        supabase
+          .from('family_members')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('event_types')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('gift_types')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+      ]);
 
-      if (error) throw error;
-      setFamilyMembers(data || []);
+      if (familyResult.error) throw familyResult.error;
+      if (eventResult.error) throw eventResult.error;
+      if (giftTypeResult.error) throw giftTypeResult.error;
+
+      setFamilyMembers(familyResult.data || []);
+      setEventTypes(eventResult.data || []);
+      setGiftTypes(giftTypeResult.data || []);
     } catch (error) {
-      console.error('Error loading family members:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoadingMembers(false);
     }
@@ -100,13 +127,33 @@ export default function AddGiftPage() {
         return;
       }
 
+      // Save new event type if it doesn't exist
+      if (formData.eventType && !eventTypes.find(et => et.name === formData.eventType)) {
+        await supabase.from('event_types').insert({
+          user_id: user!.id,
+          name: formData.eventType,
+        });
+      }
+
+      // Save new gift type if it doesn't exist
+      if (formData.giftType && !giftTypes.find(gt => gt.name === formData.giftType)) {
+        await supabase.from('gift_types').insert({
+          user_id: user!.id,
+          name: formData.giftType,
+        });
+      }
+
       const giftData = {
         user_id: user!.id,
         date: formData.date,
         amount: parseFloat(formData.amount),
         to_whom: formData.recipientName,
-        from: formData.giftFrom, // Store family member ID
+        from: formData.giftFrom,
         currency: formData.currency,
+        direction: formData.direction,
+        event_type: formData.eventType || null,
+        gift_type: formData.giftType || null,
+        notes: formData.notes || null,
       };
 
       console.log('💾 Saving gift:', giftData);
@@ -240,6 +287,148 @@ export default function AddGiftPage() {
               }
               required
               sx={{ mb: 3 }}
+            />
+
+            {/* Given/Received Toggle */}
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1.5, 
+                  fontWeight: 600,
+                  color: 'text.secondary'
+                }}
+              >
+                {t('gift.direction')}
+              </Typography>
+              
+              <ToggleButtonGroup
+                value={formData.direction}
+                exclusive
+                onChange={(e, newValue) => {
+                  if (newValue !== null) {
+                    setFormData({ ...formData, direction: newValue });
+                  }
+                }}
+                fullWidth
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: '#fff',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="given">
+                  <CallMadeIcon sx={{ mr: 1, fontSize: 20 }} />
+                  {t('gift.given')}
+                </ToggleButton>
+                <ToggleButton value="received">
+                  <CallReceivedIcon sx={{ mr: 1, fontSize: 20 }} />
+                  {t('gift.received')}
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {/* Event Type */}
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1.5, 
+                  fontWeight: 600,
+                  color: 'text.secondary'
+                }}
+              >
+                {t('gift.eventType')}
+              </Typography>
+              
+              <Autocomplete
+                freeSolo
+                options={eventTypes.map(et => et.name)}
+                value={formData.eventType}
+                onChange={(e, newValue) => {
+                  setFormData({ ...formData, eventType: newValue || '' });
+                }}
+                onInputChange={(e, newValue) => {
+                  setFormData({ ...formData, eventType: newValue });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={t('gift.eventTypePlaceholder')}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                      }
+                    }}
+                  />
+                )}
+              />
+            </Box>
+
+            {/* Gift Type */}
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1.5, 
+                  fontWeight: 600,
+                  color: 'text.secondary'
+                }}
+              >
+                {t('gift.giftType')}
+              </Typography>
+              
+              <Autocomplete
+                freeSolo
+                options={giftTypes.map(gt => gt.name)}
+                value={formData.giftType}
+                onChange={(e, newValue) => {
+                  setFormData({ ...formData, giftType: newValue || '' });
+                }}
+                onInputChange={(e, newValue) => {
+                  setFormData({ ...formData, giftType: newValue });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={t('gift.giftTypePlaceholder')}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                      }
+                    }}
+                  />
+                )}
+              />
+            </Box>
+
+            {/* Notes */}
+            <TextField
+              fullWidth
+              label={t('gift.notes')}
+              placeholder={t('gift.notesPlaceholder')}
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              multiline
+              rows={3}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
 
             <Box sx={{ mb: 4 }}>

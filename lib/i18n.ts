@@ -20,6 +20,8 @@ const resources = {
       'nav.myGifts': 'My Gifts',
       'nav.analytics': 'Analytics',
       'nav.familyMembers': 'Family Members',
+      'nav.eventTypes': 'Event Types',
+      'nav.giftTypes': 'Gift Types',
       'nav.logout': 'Logout',
       
       // Login Page
@@ -34,6 +36,7 @@ const resources = {
       'login.verify': 'Verify OTP',
       'login.verifying': 'Verifying...',
       'login.demoMode': 'Demo Mode: OTP will be shown in browser console (F12)',
+      'login.testingOtp': 'Testing OTP:',
       'login.errorSendOtp': 'Failed to send OTP. Please try again.',
       
       // Dashboard
@@ -104,6 +107,43 @@ const resources = {
       'color.red': 'Red',
       'color.brown': 'Brown',
       'color.grey': 'Grey',
+      
+      // Event Types Page
+      'eventTypes.title': 'Event Types',
+      'eventTypes.addType': 'Add Event Type',
+      'eventTypes.noTypes': 'No event types added yet',
+      'eventTypes.examples': 'e.g., Wedding, Birthday, Anniversary',
+      'eventTypes.editTitle': 'Edit Event Type',
+      'eventTypes.addTitle': 'Add Event Type',
+      'eventTypes.nameLabel': 'Event Name',
+      'eventTypes.namePlaceholder': 'e.g., Wedding, Birthday, Anniversary',
+      'eventTypes.deleteConfirm': 'Are you sure you want to delete this event type?',
+      'eventTypes.errorSave': 'Failed to save event type',
+      'eventTypes.errorName': 'Name is required',
+      
+      // Gift Types Page
+      'giftTypes.title': 'Gift Types',
+      'giftTypes.addType': 'Add Gift Type',
+      'giftTypes.noTypes': 'No gift types added yet',
+      'giftTypes.examples': 'e.g., Cash, Jewelry, Home Decor, Electronics',
+      'giftTypes.editTitle': 'Edit Gift Type',
+      'giftTypes.addTitle': 'Add Gift Type',
+      'giftTypes.nameLabel': 'Gift Type Name',
+      'giftTypes.namePlaceholder': 'e.g., Cash, Jewelry, Home Decor',
+      'giftTypes.deleteConfirm': 'Are you sure you want to delete this gift type?',
+      'giftTypes.errorSave': 'Failed to save gift type',
+      'giftTypes.errorName': 'Name is required',
+      
+      // Gift Form Fields
+      'gift.direction': 'Gift Direction',
+      'gift.given': 'Given',
+      'gift.received': 'Received',
+      'gift.eventType': 'Event Type',
+      'gift.giftType': 'Gift Type',
+      'gift.eventTypePlaceholder': 'e.g., Wedding, Birthday',
+      'gift.giftTypePlaceholder': 'e.g., Cash, Jewelry',
+      'gift.notes': 'Notes',
+      'gift.notesPlaceholder': 'Add any additional notes here...',
     },
   },
   he: {
@@ -123,6 +163,8 @@ const resources = {
       'nav.myGifts': 'המתנות שלי',
       'nav.analytics': 'ניתוח נתונים',
       'nav.familyMembers': 'בני משפחה',
+      'nav.eventTypes': 'סוגי אירועים',
+      'nav.giftTypes': 'סוגי מתנות',
       'nav.logout': 'התנתק',
       
       // Login Page
@@ -137,6 +179,7 @@ const resources = {
       'login.verify': 'אמת קוד',
       'login.verifying': 'מאמת...',
       'login.demoMode': 'מצב הדגמה: הקוד יוצג בקונסול הדפדפן (F12)',
+      'login.testingOtp': 'קוד לבדיקה:',
       'login.errorSendOtp': 'שליחת הקוד נכשלה. נסה שוב.',
       
       // Dashboard
@@ -207,6 +250,43 @@ const resources = {
       'color.red': 'אדום',
       'color.brown': 'חום',
       'color.grey': 'אפור',
+      
+      // Event Types Page
+      'eventTypes.title': 'סוגי אירועים',
+      'eventTypes.addType': 'הוסף סוג אירוע',
+      'eventTypes.noTypes': 'עדיין לא נוספו סוגי אירועים',
+      'eventTypes.examples': 'לדוגמה: חתונה, יום הולדת, יום נישואין',
+      'eventTypes.editTitle': 'ערוך סוג אירוע',
+      'eventTypes.addTitle': 'הוסף סוג אירוע',
+      'eventTypes.nameLabel': 'שם האירוע',
+      'eventTypes.namePlaceholder': 'לדוגמה: חתונה, יום הולדת, יום נישואין',
+      'eventTypes.deleteConfirm': 'האם אתה בטוח שברצונך למחוק את סוג האירוע?',
+      'eventTypes.errorSave': 'שמירת סוג האירוע נכשלה',
+      'eventTypes.errorName': 'שם הוא שדה חובה',
+      
+      // Gift Types Page
+      'giftTypes.title': 'סוגי מתנות',
+      'giftTypes.addType': 'הוסף סוג מתנה',
+      'giftTypes.noTypes': 'עדיין לא נוספו סוגי מתנות',
+      'giftTypes.examples': 'לדוגמה: מזומן, תכשיטים, עיצוב הבית, אלקטרוניקה',
+      'giftTypes.editTitle': 'ערוך סוג מתנה',
+      'giftTypes.addTitle': 'הוסף סוג מתנה',
+      'giftTypes.nameLabel': 'שם סוג המתנה',
+      'giftTypes.namePlaceholder': 'לדוגמה: מזומן, תכשיטים, עיצוב הבית',
+      'giftTypes.deleteConfirm': 'האם אתה בטוח שברצונך למחוק את סוג המתנה?',
+      'giftTypes.errorSave': 'שמירת סוג המתנה נכשלה',
+      'giftTypes.errorName': 'שם הוא שדה חובה',
+      
+      // Gift Form Fields
+      'gift.direction': 'כיוון המתנה',
+      'gift.given': 'נתתי',
+      'gift.received': 'קיבלתי',
+      'gift.eventType': 'סוג אירוע',
+      'gift.giftType': 'סוג מתנה',
+      'gift.eventTypePlaceholder': 'לדוגמה: חתונה, יום הולדת',
+      'gift.giftTypePlaceholder': 'לדוגמה: מזומן, תכשיטים',
+      'gift.notes': 'הערות',
+      'gift.notesPlaceholder': 'הוסף הערות נוספות כאן...',
     },
   },
 };

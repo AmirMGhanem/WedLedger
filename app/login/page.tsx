@@ -197,7 +197,7 @@ export default function LoginPage() {
                 >
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                      Testing OTP:
+                      {t('login.testingOtp')}
                     </Typography>
                     <Typography 
                       variant="h6" 

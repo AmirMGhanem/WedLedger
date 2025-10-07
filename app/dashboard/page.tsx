@@ -27,12 +27,15 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GroupIcon from '@mui/icons-material/Group';
-import { supabase, Gift, FamilyMember } from '@/lib/supabase';
+import CallMadeIcon from '@mui/icons-material/CallMade';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import { supabase, Gift, FamilyMember, EventType, GiftType } from '@/lib/supabase';
 import { format } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 
@@ -54,6 +57,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal states
@@ -68,6 +73,10 @@ export default function DashboardPage() {
     currency: 'USD',
     recipientName: '',
     giftFrom: '',
+    direction: 'given' as 'given' | 'received',
+    eventType: '',
+    giftType: '',
+    notes: '',
   });
   const [editError, setEditError] = useState('');
 
@@ -87,8 +96,8 @@ export default function DashboardPage() {
     if (!user) return;
     
     try {
-      // Load both gifts and family members for the logged-in user
-      const [giftsResult, familyResult] = await Promise.all([
+      // Load all data for the logged-in user
+      const [giftsResult, familyResult, eventResult, giftTypeResult] = await Promise.all([
         supabase
           .from('gifts')
           .select('*')
@@ -97,14 +106,28 @@ export default function DashboardPage() {
         supabase
           .from('family_members')
           .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('event_types')
+          .select('*')
           .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('gift_types')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
       ]);
 
       if (giftsResult.error) throw giftsResult.error;
       if (familyResult.error) throw familyResult.error;
+      if (eventResult.error) throw eventResult.error;
+      if (giftTypeResult.error) throw giftTypeResult.error;
 
       setGifts(giftsResult.data || []);
       setFamilyMembers(familyResult.data || []);
+      setEventTypes(eventResult.data || []);
+      setGiftTypes(giftTypeResult.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -156,6 +179,10 @@ export default function DashboardPage() {
       currency: gift.currency,
       recipientName: gift.to_whom,
       giftFrom: gift.from,
+      direction: gift.direction || 'given',
+      eventType: gift.event_type || '',
+      giftType: gift.gift_type || '',
+      notes: gift.notes || '',
     });
     setEditOpen(true);
   };
@@ -195,6 +222,22 @@ export default function DashboardPage() {
         return;
       }
 
+      // Save new event type if it doesn't exist
+      if (editFormData.eventType && !eventTypes.find(et => et.name === editFormData.eventType)) {
+        await supabase.from('event_types').insert({
+          user_id: user!.id,
+          name: editFormData.eventType,
+        });
+      }
+
+      // Save new gift type if it doesn't exist
+      if (editFormData.giftType && !giftTypes.find(gt => gt.name === editFormData.giftType)) {
+        await supabase.from('gift_types').insert({
+          user_id: user!.id,
+          name: editFormData.giftType,
+        });
+      }
+
       const { error } = await supabase
         .from('gifts')
         .update({
@@ -203,6 +246,10 @@ export default function DashboardPage() {
           currency: editFormData.currency,
           to_whom: editFormData.recipientName,
           from: editFormData.giftFrom,
+          direction: editFormData.direction,
+          event_type: editFormData.eventType || null,
+          gift_type: editFormData.giftType || null,
+          notes: editFormData.notes || null,
         })
         .eq('id', selectedGift.id)
         .eq('user_id', user!.id); // Ensure user owns this gift
@@ -354,13 +401,57 @@ export default function DashboardPage() {
                       {formatCurrency(gift.amount, gift.currency)}
                     </Typography>
 
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary"
-                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                    >
-                      {formatDate(gift.date)}
-                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', mb: 0.5 }}>
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                      >
+                        {formatDate(gift.date)}
+                      </Typography>
+                      {gift.direction && (
+                        <Chip
+                          label={gift.direction === 'given' ? t('gift.given') : t('gift.received')}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.65rem',
+                            backgroundColor: gift.direction === 'given' ? 'rgba(76,175,80,0.1)' : 'rgba(33,150,243,0.1)',
+                            color: gift.direction === 'given' ? '#4caf50' : '#2196f3',
+                            fontWeight: 600,
+                          }}
+                        />
+                      )}
+                    </Box>
+                    
+                    {(gift.event_type || gift.gift_type) && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.75 }}>
+                        {gift.event_type && (
+                          <Chip
+                            label={gift.event_type}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              borderColor: 'rgba(0,0,0,0.15)',
+                            }}
+                          />
+                        )}
+                        {gift.gift_type && (
+                          <Chip
+                            label={gift.gift_type}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              borderColor: 'rgba(0,0,0,0.15)',
+                            }}
+                          />
+                        )}
+                      </Box>
+                    )}
 
                     <Box
                       sx={{
@@ -480,6 +571,63 @@ export default function DashboardPage() {
                 <Typography variant="body1" sx={{ mb: 2 }}>
                   {formatDate(selectedGift.date)}
                 </Typography>
+
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {t('gift.direction')}
+                </Typography>
+                <Chip
+                  label={selectedGift.direction === 'given' ? t('gift.given') : t('gift.received')}
+                  size="small"
+                  sx={{
+                    mb: 2,
+                    backgroundColor: selectedGift.direction === 'given' ? 'rgba(76,175,80,0.15)' : 'rgba(33,150,243,0.15)',
+                    color: selectedGift.direction === 'given' ? '#4caf50' : '#2196f3',
+                    fontWeight: 600,
+                  }}
+                />
+
+                {selectedGift.event_type && (
+                  <>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {t('gift.eventType')}
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {selectedGift.event_type}
+                    </Typography>
+                  </>
+                )}
+
+                {selectedGift.gift_type && (
+                  <>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {t('gift.giftType')}
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {selectedGift.gift_type}
+                    </Typography>
+                  </>
+                )}
+
+                {selectedGift.notes && (
+                  <>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {t('gift.notes')}
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        mb: 2,
+                        whiteSpace: 'pre-wrap',
+                        bgcolor: 'background.default',
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: '1px solid rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      {selectedGift.notes}
+                    </Typography>
+                  </>
+                )}
               </Box>
             )}
           </DialogContent>
@@ -586,6 +734,102 @@ export default function DashboardPage() {
                   setEditFormData({ ...editFormData, recipientName: e.target.value })
                 }
                 required
+              />
+
+              {/* Direction Toggle */}
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
+                  {t('gift.direction')}
+                </Typography>
+                <ToggleButtonGroup
+                  value={editFormData.direction}
+                  exclusive
+                  onChange={(e, newValue) => {
+                    if (newValue !== null) {
+                      setEditFormData({ ...editFormData, direction: newValue });
+                    }
+                  }}
+                  fullWidth
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      '&.Mui-selected': {
+                        backgroundColor: 'primary.main',
+                        color: '#fff',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        },
+                      },
+                    },
+                  }}
+                >
+                  <ToggleButton value="given">
+                    <CallMadeIcon sx={{ mr: 1, fontSize: 20 }} />
+                    {t('gift.given')}
+                  </ToggleButton>
+                  <ToggleButton value="received">
+                    <CallReceivedIcon sx={{ mr: 1, fontSize: 20 }} />
+                    {t('gift.received')}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              {/* Event Type */}
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
+                  {t('gift.eventType')}
+                </Typography>
+                <Autocomplete
+                  freeSolo
+                  options={eventTypes.map(et => et.name)}
+                  value={editFormData.eventType}
+                  onChange={(e, newValue) => {
+                    setEditFormData({ ...editFormData, eventType: newValue || '' });
+                  }}
+                  onInputChange={(e, newValue) => {
+                    setEditFormData({ ...editFormData, eventType: newValue });
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder={t('gift.eventTypePlaceholder')} />
+                  )}
+                />
+              </Box>
+
+              {/* Gift Type */}
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
+                  {t('gift.giftType')}
+                </Typography>
+                <Autocomplete
+                  freeSolo
+                  options={giftTypes.map(gt => gt.name)}
+                  value={editFormData.giftType}
+                  onChange={(e, newValue) => {
+                    setEditFormData({ ...editFormData, giftType: newValue || '' });
+                  }}
+                  onInputChange={(e, newValue) => {
+                    setEditFormData({ ...editFormData, giftType: newValue });
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder={t('gift.giftTypePlaceholder')} />
+                  )}
+                />
+              </Box>
+
+              {/* Notes */}
+              <TextField
+                fullWidth
+                label={t('gift.notes')}
+                placeholder={t('gift.notesPlaceholder')}
+                value={editFormData.notes}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, notes: e.target.value })
+                }
+                multiline
+                rows={3}
               />
 
               <Box>

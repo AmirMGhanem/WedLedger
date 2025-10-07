@@ -33,5 +33,23 @@ export type Gift = {
   amount: number;
   date: string;
   currency: string;
+  direction: 'given' | 'received'; // Gift direction
+  event_type?: string; // Event category
+  gift_type?: string; // Gift category
+  created_at: string;
+  notes?: string;
+};
+
+export type EventType = {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type GiftType = {
+  id: string;
+  user_id: string;
+  name: string;
   created_at: string;
 };

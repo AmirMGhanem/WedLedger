@@ -26,6 +26,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import LanguageIcon from '@mui/icons-material/Language';
+import EventIcon from '@mui/icons-material/Event';
+import CategoryIcon from '@mui/icons-material/Category';
 
 const DRAWER_WIDTH = 280;
 
@@ -83,6 +85,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       text: t('nav.familyMembers'),
       icon: <PeopleIcon />,
       path: '/family',
+    },
+    {
+      text: t('nav.eventTypes'),
+      icon: <EventIcon />,
+      path: '/event-types',
+    },
+    {
+      text: t('nav.giftTypes'),
+      icon: <CategoryIcon />,
+      path: '/gift-types',
     },
   ];
 
