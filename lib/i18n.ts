@@ -42,6 +42,19 @@ const resources = {
       // Dashboard
       'dashboard.noGifts': 'No gifts tracked yet',
       'dashboard.addFirstGift': 'Tap the + button to add your first gift',
+      'dashboard.search': 'Search gifts...',
+      'dashboard.filterBy': 'Filter By',
+      'dashboard.sortBy': 'Sort By',
+      'dashboard.allDirections': 'All Directions',
+      'dashboard.allEventTypes': 'All Event Types',
+      'dashboard.allGiftTypes': 'All Gift Types',
+      'dashboard.allFamilyMembers': 'All Family Members',
+      'dashboard.sortDateDesc': 'Date (Newest First)',
+      'dashboard.sortDateAsc': 'Date (Oldest First)',
+      'dashboard.sortAmountDesc': 'Amount (High to Low)',
+      'dashboard.sortAmountAsc': 'Amount (Low to High)',
+      'dashboard.sortRecipient': 'Recipient (A-Z)',
+      'dashboard.clearFilters': 'Clear Filters',
       
       // Add Gift
       'addGift.title': 'Add Gift',
@@ -185,6 +198,19 @@ const resources = {
       // Dashboard
       'dashboard.noGifts': 'אין עדיין מתנות רשומות',
       'dashboard.addFirstGift': 'לחץ על + להוספת המתנה הראשונה',
+      'dashboard.search': 'חיפוש מתנות...',
+      'dashboard.filterBy': 'סנן לפי',
+      'dashboard.sortBy': 'מיין לפי',
+      'dashboard.allDirections': 'כל הכיוונים',
+      'dashboard.allEventTypes': 'כל סוגי האירועים',
+      'dashboard.allGiftTypes': 'כל סוגי המתנות',
+      'dashboard.allFamilyMembers': 'כל בני המשפחה',
+      'dashboard.sortDateDesc': 'תאריך (החדש ביותר)',
+      'dashboard.sortDateAsc': 'תאריך (הישן ביותר)',
+      'dashboard.sortAmountDesc': 'סכום (גבוה לנמוך)',
+      'dashboard.sortAmountAsc': 'סכום (נמוך לגבוה)',
+      'dashboard.sortRecipient': 'נמען (א-ת)',
+      'dashboard.clearFilters': 'נקה מסננים',
       
       // Add Gift
       'addGift.title': 'הוסף מתנה',

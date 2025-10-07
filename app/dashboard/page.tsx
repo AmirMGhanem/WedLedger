@@ -28,6 +28,9 @@ import {
   ToggleButton,
   Alert,
   Autocomplete,
+  InputAdornment,
+  Paper,
+  Collapse,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,6 +38,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import GroupIcon from '@mui/icons-material/Group';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortIcon from '@mui/icons-material/Sort';
+import ClearIcon from '@mui/icons-material/Clear';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { supabase, Gift, FamilyMember, EventType, GiftType } from '@/lib/supabase';
 import { format } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
@@ -60,6 +69,15 @@ export default function DashboardPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter, sort, and search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDirection, setFilterDirection] = useState<string>('all');
+  const [filterEventType, setFilterEventType] = useState<string>('all');
+  const [filterGiftType, setFilterGiftType] = useState<string>('all');
+  const [filterFamilyMember, setFilterFamilyMember] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date_desc');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   
   // Modal states
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -90,19 +108,67 @@ export default function DashboardPage() {
     if (user) {
       loadData();
     }
-  }, [user]);
+  }, [user, searchQuery, filterDirection, filterEventType, filterGiftType, filterFamilyMember, sortBy]);
 
   const loadData = async () => {
     if (!user) return;
     
     try {
+      // Build gifts query with filters
+      let giftsQuery = supabase
+        .from('gifts')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // Apply direction filter
+      if (filterDirection !== 'all') {
+        giftsQuery = giftsQuery.eq('direction', filterDirection);
+      }
+
+      // Apply event type filter
+      if (filterEventType !== 'all') {
+        giftsQuery = giftsQuery.eq('event_type', filterEventType);
+      }
+
+      // Apply gift type filter
+      if (filterGiftType !== 'all') {
+        giftsQuery = giftsQuery.eq('gift_type', filterGiftType);
+      }
+
+      // Apply family member filter
+      if (filterFamilyMember !== 'all') {
+        giftsQuery = giftsQuery.eq('from', filterFamilyMember);
+      }
+
+      // Apply search filter (searches in to_whom and notes)
+      if (searchQuery.trim()) {
+        giftsQuery = giftsQuery.or(`to_whom.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+      }
+
+      // Apply sorting
+      switch (sortBy) {
+        case 'date_desc':
+          giftsQuery = giftsQuery.order('date', { ascending: false });
+          break;
+        case 'date_asc':
+          giftsQuery = giftsQuery.order('date', { ascending: true });
+          break;
+        case 'amount_desc':
+          giftsQuery = giftsQuery.order('amount', { ascending: false });
+          break;
+        case 'amount_asc':
+          giftsQuery = giftsQuery.order('amount', { ascending: true });
+          break;
+        case 'recipient':
+          giftsQuery = giftsQuery.order('to_whom', { ascending: true });
+          break;
+        default:
+          giftsQuery = giftsQuery.order('date', { ascending: false });
+      }
+
       // Load all data for the logged-in user
       const [giftsResult, familyResult, eventResult, giftTypeResult] = await Promise.all([
-        supabase
-          .from('gifts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false }),
+        giftsQuery,
         supabase
           .from('family_members')
           .select('*')
@@ -134,6 +200,18 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterDirection('all');
+    setFilterEventType('all');
+    setFilterGiftType('all');
+    setFilterFamilyMember('all');
+    setSortBy('date_desc');
+  };
+
+  const hasActiveFilters = searchQuery || filterDirection !== 'all' || filterEventType !== 'all' || 
+                          filterGiftType !== 'all' || filterFamilyMember !== 'all' || sortBy !== 'date_desc';
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     // Validate currency code - must be 3 letters
@@ -292,6 +370,205 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Search Bar */}
+        <Paper
+          sx={{
+            p: { xs: 1.5, sm: 2 },
+            mb: 3,
+            borderRadius: 2,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          <TextField
+            fullWidth
+            placeholder={t('dashboard.search')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}>
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              }
+            }}
+          />
+        </Paper>
+
+        {/* Filters and Sort */}
+        <Paper
+          sx={{
+            mb: 3,
+            borderRadius: 2,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          {/* Filter Header - Always Visible */}
+          <Box
+            sx={{
+              p: { xs: 1.5, sm: 2 },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              cursor: 'pointer',
+              '&:hover': {
+                bgcolor: 'rgba(0,0,0,0.02)',
+              },
+            }}
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+          >
+            <FilterListIcon color="action" />
+            <Typography variant="subtitle2" fontWeight={600}>
+              {t('dashboard.filterBy')} & {t('dashboard.sortBy')}
+            </Typography>
+            {hasActiveFilters && (
+              <Chip
+                label={Object.values({
+                  search: searchQuery ? 1 : 0,
+                  direction: filterDirection !== 'all' ? 1 : 0,
+                  event: filterEventType !== 'all' ? 1 : 0,
+                  gift: filterGiftType !== 'all' ? 1 : 0,
+                  family: filterFamilyMember !== 'all' ? 1 : 0,
+                  sort: sortBy !== 'date_desc' ? 1 : 0,
+                }).reduce((a, b) => a + b, 0)}
+                size="small"
+                color="primary"
+                sx={{ height: 20, fontSize: '0.7rem' }}
+              />
+            )}
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
+              {hasActiveFilters && (
+                <Button
+                  size="small"
+                  startIcon={<ClearIcon />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearFilters();
+                  }}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  {t('dashboard.clearFilters')}
+                </Button>
+              )}
+              <IconButton size="small">
+                {filtersExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Collapsible Filter Content */}
+          <Collapse in={filtersExpanded}>
+            <Box sx={{ p: { xs: 1.5, sm: 2 }, pt: 0 }}>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: { xs: 1.5, sm: 2 },
+                  mb: 2,
+                }}
+              >
+                {/* Direction Filter */}
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <InputLabel>{t('gift.direction')}</InputLabel>
+                  <Select
+                    value={filterDirection}
+                    label={t('gift.direction')}
+                    onChange={(e) => setFilterDirection(e.target.value)}
+                  >
+                    <MenuItem value="all">{t('dashboard.allDirections')}</MenuItem>
+                    <MenuItem value="given">{t('gift.given')}</MenuItem>
+                    <MenuItem value="received">{t('gift.received')}</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Event Type Filter */}
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <InputLabel>{t('gift.eventType')}</InputLabel>
+                  <Select
+                    value={filterEventType}
+                    label={t('gift.eventType')}
+                    onChange={(e) => setFilterEventType(e.target.value)}
+                  >
+                    <MenuItem value="all">{t('dashboard.allEventTypes')}</MenuItem>
+                    {eventTypes.map((et) => (
+                      <MenuItem key={et.id} value={et.name}>
+                        {et.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Gift Type Filter */}
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <InputLabel>{t('gift.giftType')}</InputLabel>
+                  <Select
+                    value={filterGiftType}
+                    label={t('gift.giftType')}
+                    onChange={(e) => setFilterGiftType(e.target.value)}
+                  >
+                    <MenuItem value="all">{t('dashboard.allGiftTypes')}</MenuItem>
+                    {giftTypes.map((gt) => (
+                      <MenuItem key={gt.id} value={gt.name}>
+                        {gt.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Family Member Filter */}
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <InputLabel>{t('addGift.giftFrom')}</InputLabel>
+                  <Select
+                    value={filterFamilyMember}
+                    label={t('addGift.giftFrom')}
+                    onChange={(e) => setFilterFamilyMember(e.target.value)}
+                  >
+                    <MenuItem value="all">{t('dashboard.allFamilyMembers')}</MenuItem>
+                    {familyMembers.map((fm) => (
+                      <MenuItem key={fm.id} value={fm.id}>
+                        {fm.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Sort By */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <SortIcon color="action" />
+                <Typography variant="subtitle2" fontWeight={600}>
+                  {t('dashboard.sortBy')}
+                </Typography>
+              </Box>
+
+              <FormControl size="small" fullWidth>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <MenuItem value="date_desc">{t('dashboard.sortDateDesc')}</MenuItem>
+                  <MenuItem value="date_asc">{t('dashboard.sortDateAsc')}</MenuItem>
+                  <MenuItem value="amount_desc">{t('dashboard.sortAmountDesc')}</MenuItem>
+                  <MenuItem value="amount_asc">{t('dashboard.sortAmountAsc')}</MenuItem>
+                  <MenuItem value="recipient">{t('dashboard.sortRecipient')}</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Collapse>
+        </Paper>
+
         {gifts.length === 0 ? (
           <Box
             sx={{
