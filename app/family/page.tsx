@@ -66,10 +66,13 @@ export default function FamilyPage() {
   }, [user]);
 
   const loadMembers = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('family_members')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -117,7 +120,8 @@ export default function FamilyPage() {
             name: memberName,
             color: memberColor,
           })
-          .eq('id', editingMember.id);
+          .eq('id', editingMember.id)
+          .eq('user_id', user!.id); // Ensure user owns this record
 
         if (error) throw error;
       } else {
@@ -146,7 +150,8 @@ export default function FamilyPage() {
       const { error } = await supabase
         .from('family_members')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user!.id); // Ensure user owns this record
 
       if (error) throw error;
       loadMembers();

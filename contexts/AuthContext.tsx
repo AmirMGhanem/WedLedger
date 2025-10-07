@@ -7,7 +7,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 type AuthContextType = {
   user: SupabaseUser | null;
   loading: boolean;
-  signInWithOtp: (phone: string) => Promise<void>;
+  signInWithOtp: (phone: string) => Promise<string>; // Returns OTP for testing
   verifyOtp: (phone: string, otp: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const signInWithOtp = async (phone: string) => {
+  const signInWithOtp = async (phone: string): Promise<string> => {
     try {
       console.log('📱 Generating OTP for:', phone);
       
@@ -99,6 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // For demo purposes, we'll log it to console
       console.log('🔑 OTP Code:', otp);
       console.log('⚠️ In production, this would be sent via SMS');
+      
+      return otp; // Return OTP for testing display
       
     } catch (err: any) {
       console.error('❌ Error in signInWithOtp:', err);

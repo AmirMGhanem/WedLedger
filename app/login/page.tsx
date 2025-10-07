@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
   const { signInWithOtp, verifyOtp } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
@@ -30,7 +31,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithOtp(phone);
+      const otpCode = await signInWithOtp(phone);
+      setGeneratedOtp(otpCode);
       setStep('otp');
     } catch (err: any) {
       setError(err.message || t('login.errorSendOtp'));
@@ -169,7 +171,7 @@ export default function LoginPage() {
                 onChange={(e) => setOtp(e.target.value)}
                 required
                 sx={{ 
-                  mb: { xs: 2.5, sm: 3 },
+                  mb: { xs: 1.5, sm: 2 },
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
                   }
@@ -182,6 +184,35 @@ export default function LoginPage() {
                 }}
                 helperText={t('login.otpHelper')}
               />
+
+              {generatedOtp && (
+                <Alert 
+                  severity="info" 
+                  sx={{ 
+                    mb: { xs: 2.5, sm: 3 },
+                    borderRadius: 2,
+                    bgcolor: 'rgba(233,30,99,0.08)',
+                    border: '1px solid rgba(233,30,99,0.2)',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      Testing OTP:
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 700,
+                        color: 'primary.main',
+                        letterSpacing: 3,
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {generatedOtp}
+                    </Typography>
+                  </Box>
+                </Alert>
+              )}
 
               <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 } }}>
                 <Button

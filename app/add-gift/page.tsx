@@ -69,10 +69,13 @@ export default function AddGiftPage() {
   }, [user]);
 
   const loadFamilyMembers = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('family_members')
         .select('*')
+        .eq('user_id', user.id)
         .order('name', { ascending: true });
 
       if (error) throw error;

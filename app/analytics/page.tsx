@@ -58,10 +58,19 @@ export default function AnalyticsPage() {
   }, [user]);
 
   const loadData = async () => {
+    if (!user) return;
+    
     try {
       const [giftsResult, familyResult] = await Promise.all([
-        supabase.from('gifts').select('*').order('date', { ascending: true }),
-        supabase.from('family_members').select('*'),
+        supabase
+          .from('gifts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: true }),
+        supabase
+          .from('family_members')
+          .select('*')
+          .eq('user_id', user.id)
       ]);
 
       if (giftsResult.error) throw giftsResult.error;

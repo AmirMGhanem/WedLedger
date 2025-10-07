@@ -84,16 +84,20 @@ export default function DashboardPage() {
   }, [user]);
 
   const loadData = async () => {
+    if (!user) return;
+    
     try {
-      // Load both gifts and family members
+      // Load both gifts and family members for the logged-in user
       const [giftsResult, familyResult] = await Promise.all([
         supabase
           .from('gifts')
           .select('*')
+          .eq('user_id', user.id)
           .order('date', { ascending: false }),
         supabase
           .from('family_members')
           .select('*')
+          .eq('user_id', user.id)
       ]);
 
       if (giftsResult.error) throw giftsResult.error;
@@ -167,7 +171,8 @@ export default function DashboardPage() {
       const { error } = await supabase
         .from('gifts')
         .delete()
-        .eq('id', giftId);
+        .eq('id', giftId)
+        .eq('user_id', user!.id); // Ensure user owns this gift
 
       if (error) throw error;
       
@@ -199,7 +204,8 @@ export default function DashboardPage() {
           to_whom: editFormData.recipientName,
           from: editFormData.giftFrom,
         })
-        .eq('id', selectedGift.id);
+        .eq('id', selectedGift.id)
+        .eq('user_id', user!.id); // Ensure user owns this gift
 
       if (error) throw error;
 
