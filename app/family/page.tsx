@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Container,
   Paper,
@@ -29,13 +30,28 @@ import AppLayout from '@/components/AppLayout';
 
 export default function FamilyPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [memberName, setMemberName] = useState('');
+  const [memberColor, setMemberColor] = useState('#e91e63'); // Default pink
   const [error, setError] = useState('');
+
+  const COLOR_OPTIONS = [
+    { name: t('color.pink'), value: '#e91e63' },
+    { name: t('color.purple'), value: '#9c27b0' },
+    { name: t('color.blue'), value: '#2196f3' },
+    { name: t('color.cyan'), value: '#00bcd4' },
+    { name: t('color.teal'), value: '#009688' },
+    { name: t('color.green'), value: '#4caf50' },
+    { name: t('color.orange'), value: '#ff9800' },
+    { name: t('color.red'), value: '#f44336' },
+    { name: t('color.brown'), value: '#795548' },
+    { name: t('color.grey'), value: '#607d8b' },
+  ];
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -69,9 +85,11 @@ export default function FamilyPage() {
     if (member) {
       setEditingMember(member);
       setMemberName(member.name);
+      setMemberColor(member.color || '#e91e63');
     } else {
       setEditingMember(null);
       setMemberName('');
+      setMemberColor('#e91e63');
     }
     setDialogOpen(true);
     setError('');
@@ -81,12 +99,13 @@ export default function FamilyPage() {
     setDialogOpen(false);
     setEditingMember(null);
     setMemberName('');
+    setMemberColor('#e91e63');
     setError('');
   };
 
   const handleSave = async () => {
     if (!memberName.trim()) {
-      setError('Name is required');
+      setError(t('family.errorName'));
       return;
     }
 
@@ -94,7 +113,10 @@ export default function FamilyPage() {
       if (editingMember) {
         const { error } = await supabase
           .from('family_members')
-          .update({ name: memberName })
+          .update({ 
+            name: memberName,
+            color: memberColor,
+          })
           .eq('id', editingMember.id);
 
         if (error) throw error;
@@ -102,6 +124,7 @@ export default function FamilyPage() {
         const { error } = await supabase.from('family_members').insert({
           user_id: user!.id,
           name: memberName,
+          color: memberColor,
         });
 
         if (error) throw error;
@@ -110,12 +133,12 @@ export default function FamilyPage() {
       handleCloseDialog();
       loadMembers();
     } catch (err: any) {
-      setError(err.message || 'Failed to save family member');
+      setError(err.message || t('family.errorSave'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this family member?')) {
+    if (!confirm(t('family.deleteConfirm'))) {
       return;
     }
 
@@ -149,12 +172,14 @@ export default function FamilyPage() {
 
   return (
     <AppLayout>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2.5, sm: 4 },
             borderRadius: 3,
+            border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           }}
         >
           <Box
@@ -165,8 +190,15 @@ export default function FamilyPage() {
               mb: 3,
             }}
           >
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              Family Members
+            <Typography 
+              variant="h5" 
+              component="h1" 
+              sx={{ 
+                fontWeight: 700,
+                fontSize: { xs: '1.25rem', sm: '1.5rem' }
+              }}
+            >
+              {t('family.title')}
             </Typography>
 
             <Button
@@ -176,16 +208,22 @@ export default function FamilyPage() {
               sx={{
                 borderRadius: 2,
                 fontWeight: 600,
+                fontSize: { xs: '0.875rem', sm: '0.95rem' },
+                px: { xs: 2, sm: 3 },
+                boxShadow: '0 4px 12px rgba(233,30,99,0.25)',
+                '&:hover': {
+                  boxShadow: '0 6px 16px rgba(233,30,99,0.35)',
+                },
               }}
             >
-              Add Member
+              {t('family.addMember')}
             </Button>
           </Box>
 
           {members.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="body1" color="text.secondary">
-                No family members added yet
+                {t('family.noMembers')}
               </Typography>
             </Box>
           ) : (
@@ -216,8 +254,24 @@ export default function FamilyPage() {
                     borderRadius: 2,
                     mb: 1,
                     bgcolor: 'background.default',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      borderColor: 'rgba(0,0,0,0.1)',
+                    },
                   }}
                 >
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: member.color || '#e91e63',
+                      mr: 2,
+                      flexShrink: 0,
+                    }}
+                  />
                   <ListItemText
                     primary={member.name}
                     primaryTypographyProps={{
@@ -231,9 +285,20 @@ export default function FamilyPage() {
           )}
         </Paper>
 
-        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-          <DialogTitle>
-            {editingMember ? 'Edit Family Member' : 'Add Family Member'}
+        <Dialog 
+          open={dialogOpen} 
+          onClose={handleCloseDialog} 
+          maxWidth="sm" 
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }
+          }}
+        >
+          <DialogTitle sx={{ pb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+            {editingMember ? t('family.editTitle') : t('family.addTitle')}
           </DialogTitle>
           <DialogContent>
             {error && (
@@ -244,24 +309,66 @@ export default function FamilyPage() {
             <TextField
               autoFocus
               margin="dense"
-              label="Name"
+              label={t('family.nameLabel')}
               type="text"
               fullWidth
               value={memberName}
               onChange={(e) => setMemberName(e.target.value)}
-              sx={{ mt: 2 }}
+              sx={{ mt: 2, mb: 3 }}
             />
+
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600 }}>
+              {t('family.colorLabel')}
+            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1.5,
+              }}
+            >
+              {COLOR_OPTIONS.map((color) => (
+                <Box
+                  key={color.value}
+                  onClick={() => setMemberColor(color.value)}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    backgroundColor: color.value,
+                    cursor: 'pointer',
+                    border: memberColor === color.value ? '3px solid #000' : '3px solid transparent',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    },
+                  }}
+                  title={color.name}
+                />
+              ))}
+            </Box>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={handleCloseDialog} sx={{ borderRadius: 2 }}>
-              Cancel
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button 
+              onClick={handleCloseDialog} 
+              sx={{ borderRadius: 2 }}
+            >
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSave}
               variant="contained"
-              sx={{ borderRadius: 2, fontWeight: 600 }}
+              sx={{ 
+                borderRadius: 2,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(233,30,99,0.25)',
+                '&:hover': {
+                  boxShadow: '0 6px 16px rgba(233,30,99,0.35)',
+                },
+              }}
             >
-              Save
+              {t('common.save')}
             </Button>
           </DialogActions>
         </Dialog>

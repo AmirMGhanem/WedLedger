@@ -1,0 +1,112 @@
+-- Enable UUID extension
+create extension if not exists "uuid-ossp";
+
+
+create table if not exists public.users (
+  id uuid primary key default uuid_generate_v4(),
+  phone text unique not null,
+  otp_code text,
+  created_at timestamp with time zone default now()
+);
+
+
+create table if not exists public.family_members (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references public.users (id) on delete cascade,
+  name text not null,
+  created_at timestamp with time zone default now()
+);
+
+
+create table if not exists public.gifts (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references public.users (id) on delete cascade,
+  to_whom text not null,
+  amount numeric(10,2) not null,
+  date date default current_date,
+  from_family boolean default false,
+  created_at timestamp with time zone default now()
+);
+
+
+alter table public.users enable row level security;
+alter table public.family_members enable row level security;
+alter table public.gifts enable row level security;
+
+
+create policy "Users can view themselves"
+on public.users
+for select
+using (auth.uid() = id);
+
+create policy "Users can insert themselves"
+on public.users
+for insert
+with check (auth.uid() = id);
+
+
+create policy "Users can view their family members"
+on public.family_members
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their family members"
+on public.family_members
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their family members"
+on public.family_members
+for update
+using (auth.uid() = user_id);
+
+create policy "Users can delete their family members"
+on public.family_members
+for delete
+using (auth.uid() = user_id);
+
+
+
+create policy "Users can view their own gifts"
+on public.gifts
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own gifts"
+on public.gifts
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own gifts"
+on public.gifts
+for update
+using (auth.uid() = user_id);
+
+create policy "Users can delete their own gifts"
+on public.gifts
+for delete
+using (auth.uid() = user_id);
+
+
+
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.users (id, phone)
+  values (new.id, new.phone_number)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute procedure public.handle_new_user();
+
+
+
+project uri - > https://fxvvpsfxqygftitvyuwo.supabase.co
+api key -> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4dnZwc2Z4cXlnZnRpdHZ5dXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3MDkxMjksImV4cCI6MjA3NTI4NTEyOX0.Z9iTpEN4ksLH7UrjizRgaqyyUQ_115qN_mmcwHzaKnI
+

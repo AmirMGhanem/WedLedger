@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   AppBar,
   Box,
@@ -15,17 +16,24 @@ import {
   ListItemText,
   Toolbar,
   Typography,
+  Button,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import PeopleIcon from '@mui/icons-material/People';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import LanguageIcon from '@mui/icons-material/Language';
 
 const DRAWER_WIDTH = 280;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [langMenuAnchor, setLangMenuAnchor] = useState<null | HTMLElement>(null);
   const { signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -47,14 +55,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleLanguageClick = (event: React.MouseEvent<HTMLElement>) => {
+    setLangMenuAnchor(event.currentTarget);
+  };
+
+  const handleLanguageClose = () => {
+    setLangMenuAnchor(null);
+  };
+
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    handleLanguageClose();
+  };
+
   const menuItems = [
     {
-      text: 'My Gifts',
+      text: t('nav.myGifts'),
       icon: <CardGiftcardIcon />,
       path: '/dashboard',
     },
     {
-      text: 'Family Members',
+      text: t('nav.analytics'),
+      icon: <AnalyticsIcon />,
+      path: '/analytics',
+    },
+    {
+      text: t('nav.familyMembers'),
       icon: <PeopleIcon />,
       path: '/family',
     },
@@ -69,7 +95,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
       >
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          WedLedger
+          {t('app.name')}
         </Typography>
       </Toolbar>
 
@@ -119,7 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <ListItemIcon sx={{ color: 'error.main' }}>
               <LogoutIcon />
             </ListItemIcon>
-            <ListItemText primary="Logout" />
+            <ListItemText primary={t('nav.logout')} />
           </ListItemButton>
         </ListItem>
       </List>
@@ -144,9 +170,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
-            WedLedger
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, flexGrow: 1 }}>
+            {t('app.name')}
           </Typography>
+          
+          <Button
+            color="inherit"
+            onClick={handleLanguageClick}
+            startIcon={<LanguageIcon />}
+            sx={{ textTransform: 'none' }}
+          >
+            {language === 'he' ? 'עברית' : 'English'}
+          </Button>
+          
+          <Menu
+            anchorEl={langMenuAnchor}
+            open={Boolean(langMenuAnchor)}
+            onClose={handleLanguageClose}
+          >
+            <MenuItem onClick={() => handleLanguageChange('he')}>
+              עברית (Hebrew)
+            </MenuItem>
+            <MenuItem onClick={() => handleLanguageChange('en')}>
+              English
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
@@ -154,6 +202,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         variant="temporary"
         open={drawerOpen}
         onClose={handleDrawerToggle}
+        anchor={language === 'he' ? 'right' : 'left'}
         ModalProps={{
           keepMounted: true,
         }}
