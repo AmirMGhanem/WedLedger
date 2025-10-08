@@ -13,6 +13,8 @@ import {
   Card,
   CardContent,
   Chip,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   PieChart,
@@ -44,6 +46,9 @@ export default function AnalyticsPage() {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({});
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,8 +59,35 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (user) {
       loadData();
+      fetchExchangeRates();
     }
   }, [user]);
+
+  const fetchExchangeRates = async () => {
+    try {
+      // Fetch latest exchange rates from Frankfurter API with ILS as base
+      const response = await fetch('https://api.frankfurter.dev/v1/latest?base=ILS');
+      const data = await response.json();
+      
+      // Convert rates to ILS (invert the rates since we have ILS as base)
+      const ratesToILS: { [key: string]: number } = { ILS: 1 };
+      
+      Object.keys(data.rates).forEach(currency => {
+        // Since base is ILS, data.rates[currency] tells us how much currency we get for 1 ILS
+        // To convert TO ILS, we need to invert: 1 / rate
+        ratesToILS[currency] = 1 / data.rates[currency];
+      });
+      
+      setExchangeRates(ratesToILS);
+      console.log('📊 Exchange rates loaded:', ratesToILS);
+    } catch (error) {
+      console.error('❌ Error fetching exchange rates:', error);
+      setErrorMessage(t('analytics.exchangeRateError'));
+      setShowError(true);
+      // Set empty rates - will skip conversion
+      setExchangeRates({});
+    }
+  };
 
   const loadData = async () => {
     if (!user) return;
@@ -85,9 +117,18 @@ export default function AnalyticsPage() {
     }
   };
 
+  // Convert currency to ILS using fetched rates
+  const convertToILS = (amount: number, currency: string): number => {
+    if (!exchangeRates || Object.keys(exchangeRates).length === 0) {
+      return 0; // Return 0 if rates not loaded - will be filtered out
+    }
+    const rate = exchangeRates[currency] || exchangeRates['USD'] || 1;
+    return amount * rate;
+  };
+
   // Analytics calculations
   const analytics = useMemo(() => {
-    if (!gifts.length) return null;
+    if (!gifts.length || Object.keys(exchangeRates).length === 0) return null;
 
     // Total gifts and amounts by currency
     const totalGifts = gifts.length;
@@ -146,9 +187,12 @@ export default function AnalyticsPage() {
       gifts: count,
     }));
 
-    // Average gift amount
-    const totalAmount = gifts.reduce((sum, gift) => sum + gift.amount, 0);
-    const avgAmount = totalAmount / totalGifts;
+    // Average gift amount (converted to ILS)
+    const totalAmountInILS = gifts.reduce((sum, gift) => {
+      return sum + convertToILS(gift.amount, gift.currency || 'USD');
+    }, 0);
+    // Only calculate average if we have valid exchange rates
+    const avgAmount = totalAmountInILS > 0 ? totalAmountInILS / totalGifts : 0;
 
     return {
       totalGifts,
@@ -161,7 +205,7 @@ export default function AnalyticsPage() {
       avgAmount,
       totalRecipients: Object.keys(recipientCounts).length,
     };
-  }, [gifts, familyMembers]);
+  }, [gifts, familyMembers, exchangeRates]);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     const validCurrency = currency && currency.length === 3 && /^[A-Z]{3}$/.test(currency) 
@@ -323,11 +367,11 @@ export default function AnalyticsPage() {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                 <TrendingUpIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'warning.main', mr: 1.5 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  {formatCurrency(analytics.avgAmount)}
+                  {analytics.avgAmount > 0 ? formatCurrency(analytics.avgAmount, 'ILS') : 'N/A'}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                {t('analytics.avgGift')}
+                {t('analytics.avgGift')} {analytics.avgAmount > 0 ? '(₪)' : ''}
               </Typography>
             </CardContent>
           </Card>
@@ -577,6 +621,22 @@ export default function AnalyticsPage() {
           </Paper>
         </Box>
       </Container>
+
+      {/* Error Snackbar */}
+      <Snackbar 
+        open={showError} 
+        autoHideDuration={6000} 
+        onClose={() => setShowError(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowError(false)} 
+          severity="error" 
+          sx={{ width: '100%' }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </AppLayout>
   );
 }

@@ -28,6 +28,7 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import LanguageIcon from '@mui/icons-material/Language';
 import EventIcon from '@mui/icons-material/Event';
 import CategoryIcon from '@mui/icons-material/Category';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 const DRAWER_WIDTH = 280;
 
@@ -95,6 +96,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       text: t('nav.giftTypes'),
       icon: <CategoryIcon />,
       path: '/gift-types',
+    },
+    {
+      text: t('nav.settings'),
+      icon: <SettingsIcon />,
+      path: '/settings',
     },
   ];
 

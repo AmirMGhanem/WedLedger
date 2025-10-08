@@ -22,6 +22,7 @@ const resources = {
       'nav.familyMembers': 'Family Members',
       'nav.eventTypes': 'Event Types',
       'nav.giftTypes': 'Gift Types',
+      'nav.settings': 'Settings',
       'nav.logout': 'Logout',
       
       // Login Page
@@ -88,6 +89,7 @@ const resources = {
       'analytics.totalAmount': 'Total Amount',
       'analytics.totalRecipients': 'Total Recipients',
       'analytics.avgGift': 'Average Gift',
+      'analytics.exchangeRateError': 'Failed to load exchange rates. Showing amounts in original currencies.',
       'analytics.byMember': 'Gifts by Family Member',
       'analytics.amountByMember': 'Amount by Family Member',
       'analytics.overTime': 'Gifts Over Time',
@@ -157,6 +159,60 @@ const resources = {
       'gift.giftTypePlaceholder': 'e.g., Cash, Jewelry',
       'gift.notes': 'Notes',
       'gift.notesPlaceholder': 'Add any additional notes here...',
+      
+      // Settings
+      'settings.title': 'Settings',
+      'settings.profile': 'Profile',
+      'settings.integrations': 'Integrations',
+      'settings.export': 'Export Data',
+      'settings.preferences': 'Preferences',
+      'settings.about': 'About',
+      
+      // Profile Tab
+      'settings.profile.name': 'Display Name',
+      'settings.profile.namePlaceholder': 'Your name',
+      'settings.profile.phone': 'Phone Number',
+      'settings.profile.language': 'Language',
+      'settings.profile.save': 'Save Profile',
+      
+      // Integrations Tab
+      'settings.integrations.title': 'Connect Your Accounts',
+      'settings.integrations.google': 'Google Calendar',
+      'settings.integrations.googleDesc': 'Sync gift dates to your calendar',
+      'settings.integrations.whatsapp': 'WhatsApp',
+      'settings.integrations.whatsappDesc': 'Send gift reminders via WhatsApp',
+      'settings.integrations.excel': 'Excel / Google Sheets',
+      'settings.integrations.excelDesc': 'Export and sync with spreadsheets',
+      'settings.integrations.status.connected': 'Connected',
+      'settings.integrations.status.connect': 'Connect',
+      'settings.integrations.status.disconnect': 'Disconnect',
+      
+      // Export Tab
+      'settings.export.title': 'Export Your Data',
+      'settings.export.csv': 'Export as CSV',
+      'settings.export.csvDesc': 'Download all gifts in spreadsheet format',
+      'settings.export.pdf': 'Export as PDF',
+      'settings.export.pdfDesc': 'Generate a formatted PDF report',
+      'settings.export.json': 'Export as JSON',
+      'settings.export.jsonDesc': 'Download raw data for backup',
+      'settings.export.download': 'Download',
+      
+      // Preferences Tab
+      'settings.preferences.title': 'App Preferences',
+      'settings.preferences.currency': 'Default Currency',
+      'settings.preferences.dateFormat': 'Date Format',
+      'settings.preferences.notifications': 'Notifications',
+      'settings.preferences.notificationsDesc': 'Receive gift reminders',
+      'settings.preferences.darkMode': 'Dark Mode',
+      'settings.preferences.darkModeDesc': 'Use dark theme',
+      
+      // About Tab
+      'settings.about.version': 'Version',
+      'settings.about.developer': 'Developed by',
+      'settings.about.support': 'Support',
+      'settings.about.terms': 'Terms of Service',
+      'settings.about.privacy': 'Privacy Policy',
+      'settings.about.viewOnGithub': 'View on GitHub',
     },
   },
   he: {
@@ -178,6 +234,7 @@ const resources = {
       'nav.familyMembers': 'בני משפחה',
       'nav.eventTypes': 'סוגי אירועים',
       'nav.giftTypes': 'סוגי מתנות',
+      'nav.settings': 'הגדרות',
       'nav.logout': 'התנתק',
       
       // Login Page
@@ -244,6 +301,7 @@ const resources = {
       'analytics.totalAmount': 'סכום כולל',
       'analytics.totalRecipients': 'סה״כ מקבלים',
       'analytics.avgGift': 'ממוצע מתנה',
+      'analytics.exchangeRateError': 'טעינת שערי מטבע נכשלה. מציג סכומים במטבע המקורי.',
       'analytics.byMember': 'מתנות לפי בן משפחה',
       'analytics.amountByMember': 'סכום לפי בן משפחה',
       'analytics.overTime': 'מתנות לאורך זמן',
@@ -313,6 +371,60 @@ const resources = {
       'gift.giftTypePlaceholder': 'לדוגמה: מזומן, תכשיטים',
       'gift.notes': 'הערות',
       'gift.notesPlaceholder': 'הוסף הערות נוספות כאן...',
+      
+      // Settings
+      'settings.title': 'הגדרות',
+      'settings.profile': 'פרופיל',
+      'settings.integrations': 'אינטגרציות',
+      'settings.export': 'ייצוא נתונים',
+      'settings.preferences': 'העדפות',
+      'settings.about': 'אודות',
+      
+      // Profile Tab
+      'settings.profile.name': 'שם תצוגה',
+      'settings.profile.namePlaceholder': 'השם שלך',
+      'settings.profile.phone': 'מספר טלפון',
+      'settings.profile.language': 'שפה',
+      'settings.profile.save': 'שמור פרופיל',
+      
+      // Integrations Tab
+      'settings.integrations.title': 'חבר את החשבונות שלך',
+      'settings.integrations.google': 'Google Calendar',
+      'settings.integrations.googleDesc': 'סנכרן תאריכי מתנות ליומן',
+      'settings.integrations.whatsapp': 'WhatsApp',
+      'settings.integrations.whatsappDesc': 'שלח תזכורות מתנות דרך WhatsApp',
+      'settings.integrations.excel': 'Excel / Google Sheets',
+      'settings.integrations.excelDesc': 'ייצא וסנכרן עם גיליונות אלקטרוניים',
+      'settings.integrations.status.connected': 'מחובר',
+      'settings.integrations.status.connect': 'התחבר',
+      'settings.integrations.status.disconnect': 'התנתק',
+      
+      // Export Tab
+      'settings.export.title': 'ייצא את הנתונים שלך',
+      'settings.export.csv': 'ייצא כ-CSV',
+      'settings.export.csvDesc': 'הורד את כל המתנות בפורמט גיליון',
+      'settings.export.pdf': 'ייצא כ-PDF',
+      'settings.export.pdfDesc': 'צור דוח PDF מעוצב',
+      'settings.export.json': 'ייצא כ-JSON',
+      'settings.export.jsonDesc': 'הורד נתונים גולמיים לגיבוי',
+      'settings.export.download': 'הורד',
+      
+      // Preferences Tab
+      'settings.preferences.title': 'העדפות אפליקציה',
+      'settings.preferences.currency': 'מטבע ברירת מחדל',
+      'settings.preferences.dateFormat': 'פורמט תאריך',
+      'settings.preferences.notifications': 'התראות',
+      'settings.preferences.notificationsDesc': 'קבל תזכורות מתנות',
+      'settings.preferences.darkMode': 'מצב כהה',
+      'settings.preferences.darkModeDesc': 'השתמש בערכת נושא כהה',
+      
+      // About Tab
+      'settings.about.version': 'גרסה',
+      'settings.about.developer': 'פותח על ידי',
+      'settings.about.support': 'תמיכה',
+      'settings.about.terms': 'תנאי שימוש',
+      'settings.about.privacy': 'מדיניות פרטיות',
+      'settings.about.viewOnGithub': 'צפה ב-GitHub',
     },
   },
 };
