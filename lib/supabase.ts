@@ -37,6 +37,7 @@ export type Gift = {
   event_type?: string; // Event category
   gift_type?: string; // Gift category
   created_at: string;
+  recipient_phone?: string;
   notes?: string;
 };
 

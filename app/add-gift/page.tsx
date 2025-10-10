@@ -59,6 +59,7 @@ export default function AddGiftPage() {
     amount: '',
     currency: 'USD',
     recipientName: '',
+    recipientPhone: '',
     giftFrom: '', // family member ID
     direction: 'given' as 'given' | 'received',
     eventType: '',
@@ -146,8 +147,9 @@ export default function AddGiftPage() {
       const giftData = {
         user_id: user!.id,
         date: formData.date,
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(formData.amount) || 0,
         to_whom: formData.recipientName,
+        recipient_phone: formData.recipientPhone || null,
         from: formData.giftFrom,
         currency: formData.currency,
         direction: formData.direction,
@@ -252,7 +254,6 @@ export default function AddGiftPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, amount: e.target.value })
                 }
-                required
                 inputProps={{
                   min: 0,
                   step: 0.01,
@@ -286,6 +287,18 @@ export default function AddGiftPage() {
                 setFormData({ ...formData, recipientName: e.target.value })
               }
               required
+              sx={{ mb: 3 }}
+            />
+
+            <TextField
+              fullWidth
+              label={t('addGift.recipientPhone')}
+              value={formData.recipientPhone}
+              onChange={(e) =>
+                setFormData({ ...formData, recipientPhone: e.target.value })
+              }
+              type="tel"
+              placeholder="0501231231"
               sx={{ mb: 3 }}
             />
 

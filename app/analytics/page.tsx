@@ -37,7 +37,7 @@ import AppLayout from '@/components/AppLayout';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleIcon from '@mui/icons-material/People';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import { GrMoney } from "react-icons/gr";
 
 export default function AnalyticsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -321,11 +321,12 @@ export default function AnalyticsPage() {
           >
             <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <AttachMoneyIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'success.main', mr: 1.5 }} />
+                {/* <PaidIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'success.main', mr: 1.5 }} /> */}
+                <GrMoney size={32} color="success.main" />
                 <Box>
                   {Object.entries(analytics.amountsByCurrency).map(([currency, amount]) => (
-                    <Typography key={currency} variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                      {formatCurrency(amount, currency)}
+                    <Typography key={currency} variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem' }, mr: 1.5 }}>
+                      {formatCurrency(amount, currency) }
                     </Typography>
                   ))}
                 </Box>
