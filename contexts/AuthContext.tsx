@@ -4,11 +4,22 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
+type SharedContext = {
+  connectionId: string;
+  childUserId: string;
+  permission: 'read' | 'read_write';
+  childPhone: string;
+} | null;
+
 type AuthContextType = {
   user: SupabaseUser | null;
   loading: boolean;
+  sharedContext: SharedContext;
+  setSharedContext: (context: SharedContext) => void;
+  clearSharedContext: () => void;
   signInWithOtp: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<void>;
+  verifyOtp: (phone: string, otp: string) => Promise<{ needsRegistration: boolean }>;
+  updateProfile: (firstname: string, lastname: string, birthdate: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -17,9 +28,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sharedContext, setSharedContextState] = useState<SharedContext>(null);
 
   useEffect(() => {
-    // Load user from localStorage on mount
+    // Load user and shared context from localStorage on mount
     const loadUser = async () => {
       if (typeof window !== 'undefined') {
         const storedUser = localStorage.getItem('wedledger_user');
@@ -31,12 +43,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem('wedledger_user');
           }
         }
+
+        // Load shared context
+        const storedContext = localStorage.getItem('wedledger_shared_context');
+        if (storedContext) {
+          try {
+            const contextData = JSON.parse(storedContext);
+            setSharedContextState(contextData);
+          } catch (e) {
+            localStorage.removeItem('wedledger_shared_context');
+          }
+        }
       }
       setLoading(false);
     };
 
     loadUser();
   }, []);
+
+  const setSharedContext = (context: SharedContext) => {
+    setSharedContextState(context);
+    if (typeof window !== 'undefined') {
+      if (context) {
+        localStorage.setItem('wedledger_shared_context', JSON.stringify(context));
+      } else {
+        localStorage.removeItem('wedledger_shared_context');
+      }
+    }
+  };
+
+  const clearSharedContext = () => {
+    setSharedContextState(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('wedledger_shared_context');
+    }
+  };
 
   const signInWithOtp = async (phone: string): Promise<void> => {
     try {
@@ -94,6 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         app_metadata: {},
         user_metadata: { 
           phone: data.user.phone,
+          firstname: data.user.firstname,
+          lastname: data.user.lastname,
+          birthdate: data.user.birthdate,
           familyCount: data.user.familyCount,
           giftsCount: data.user.giftsCount,
         },
@@ -114,26 +158,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('📱 Phone:', data.user.phone);
       console.log(`📊 Family: ${data.user.familyCount}, Gifts: ${data.user.giftsCount}`);
       
+      return { needsRegistration: data.needsRegistration || false };
+      
     } catch (err: any) {
       console.error('❌ Authentication error:', err);
       throw new Error(err.message || 'Authentication failed');
     }
   };
 
+  const updateProfile = async (firstname: string, lastname: string, birthdate: string) => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          firstname,
+          lastname,
+          birthdate,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      // Update user session with new profile data
+      const updatedUser: SupabaseUser = {
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          firstname: data.user.firstname,
+          lastname: data.user.lastname,
+          birthdate: data.user.birthdate,
+        },
+      };
+
+      setUser(updatedUser);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wedledger_user', JSON.stringify(updatedUser));
+      }
+
+      console.log('✅ Profile updated successfully');
+    } catch (err: any) {
+      console.error('❌ Profile update error:', err);
+      throw new Error(err.message || 'Failed to update profile');
+    }
+  };
+
   const signOut = async () => {
     console.log('👋 Signing out...');
     
-    // Clear user from localStorage
+    // Clear user and shared context from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wedledger_user');
+      localStorage.removeItem('wedledger_shared_context');
     }
     
     setUser(null);
+    setSharedContextState(null);
     console.log('✅ Signed out successfully');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithOtp, verifyOtp, signOut }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        loading, 
+        sharedContext,
+        setSharedContext,
+        clearSharedContext,
+        signInWithOtp, 
+        verifyOtp, 
+        updateProfile,
+        signOut 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

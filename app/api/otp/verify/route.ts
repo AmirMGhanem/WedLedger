@@ -85,12 +85,19 @@ export async function POST(request: NextRequest) {
                 .eq('user_id', dbUser.id)
         ]);
 
+        // Check if user needs to complete registration
+        const needsRegistration = !dbUser.firstname || !dbUser.lastname || !dbUser.birthdate;
+
         return NextResponse.json({
             success: true,
             message: 'OTP verified successfully',
+            needsRegistration,
             user: {
                 id: dbUser.id,
                 phone: dbUser.phone,
+                firstname: dbUser.firstname,
+                lastname: dbUser.lastname,
+                birthdate: dbUser.birthdate,
                 familyCount: familyResult.data?.length || 0,
                 giftsCount: giftsResult.data?.length || 0,
             },

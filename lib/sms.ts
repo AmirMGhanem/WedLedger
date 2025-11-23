@@ -20,6 +20,28 @@ interface SMSResponse {
  * @returns Promise with SMS response
  */
 export async function sendSMS({ recipient, message }: SendSMSOptions): Promise<SMSResponse> {
+    const mode = process.env.MODE || 'PRODUCTION';
+    const isDebug = mode === 'DEBUG';
+
+    // Clean phone number - remove spaces, dashes, and ensure proper format
+    const cleanRecipient = recipient.replace(/[\s-]/g, '');
+
+    // In DEBUG mode, just log to console instead of sending
+    if (isDebug) {
+        console.log('='.repeat(60));
+        console.log('📱 SMS (DEBUG MODE - Not Sent)');
+        console.log('='.repeat(60));
+        console.log('To:', cleanRecipient);
+        console.log('Message:', message);
+        console.log('='.repeat(60));
+        
+        return {
+            success: true,
+            recipients: 1,
+        };
+    }
+
+    // Production mode - send actual SMS
     const apiUrl = process.env.SMS_API_URL;
     const apiKey = process.env.SMS_API_KEY;
     const phoneNumber = process.env.SMS_PHONE_NUMBER;
@@ -38,9 +60,6 @@ export async function sendSMS({ recipient, message }: SendSMSOptions): Promise<S
             `Missing required SMS environment variables: ${missingVars.join(', ')}`
         );
     }
-
-    // Clean phone number - remove spaces, dashes, and ensure proper format
-    const cleanRecipient = recipient.replace(/[\s-]/g, '');
 
     try {
         const response = await fetch(apiUrl, {

@@ -7,6 +7,10 @@ This guide explains how to configure SMS functionality for OTP (One-Time Passwor
 Add the following environment variables to your `.env` or `.env.local` file:
 
 ```env
+# Application Configuration
+BASEURL=https://wedledger.vercel.app
+MODE=PRODUCTION
+
 # SMS Configuration (sms4free.co.il)
 SMS_API_URL=https://api.sms4free.co.il/ApiSMS/v2/SendSMS
 SMS_API_KEY=your_sms_api_key
@@ -14,6 +18,11 @@ SMS_PHONE_NUMBER=your_phone_number
 SMS_PASS=your_sms_password
 SMS_SENDER=WedLedger
 ```
+
+### Application Variables
+
+- **BASEURL**: The base URL of your application (e.g., `https://wedledger.vercel.app` for production, `http://localhost:3000` for development)
+- **MODE**: Set to `DEBUG` to print SMS to console instead of sending, or `PRODUCTION` to send actual SMS
 
 ### Required Variables
 
@@ -118,7 +127,13 @@ Verifies an OTP code for the provided phone number.
 
 ## Testing
 
-1. Make sure all environment variables are set
+### Debug Mode
+
+Set `MODE=DEBUG` in your `.env` file to test SMS functionality without actually sending messages. In debug mode, SMS messages will be printed to the console instead.
+
+### Production Mode
+
+1. Make sure all environment variables are set (including `BASEURL` and `MODE=PRODUCTION`)
 2. Start the development server: `npm run dev`
 3. Navigate to the login page
 4. Enter a phone number and request an OTP

@@ -39,6 +39,53 @@ const resources = {
       'login.demoMode': 'Demo Mode: OTP will be shown in browser console (F12)',
       'login.testingOtp': 'Testing OTP:',
       'login.errorSendOtp': 'Failed to send OTP. Please try again.',
+      'login.errorInvalidOtp': 'Invalid OTP. Please check the code and try again.',
+      
+      // Registration
+      'register.title': 'Complete Your Profile',
+      'register.subtitle': 'Please provide your information to complete registration',
+      'register.firstname': 'First Name',
+      'register.lastname': 'Last Name',
+      'register.birthdate': 'Birthdate',
+      'register.complete': 'Complete Registration',
+      'register.saving': 'Saving...',
+      'register.errorRequired': 'All fields are required',
+      'register.errorSave': 'Failed to save profile',
+      
+      // App
+      'app.hello': 'Hello {name}',
+      'app.viewingAs': 'Viewing: {name}',
+      'app.viewMode': 'View Only',
+      'app.editMode': 'Edit Mode',
+      'app.viewModeBanner': 'You are viewing {name}\'s ledger in read-only mode',
+      'app.editModeBanner': 'You are viewing {name}\'s ledger with edit permissions',
+      'app.backToMyLedger': 'Back to My Ledger',
+      
+      // Navigation
+      'nav.sharedLedgers': 'Shared Ledgers',
+      'nav.sharedWithOthers': 'Shared with Others',
+      
+      // Shared Ledgers Page
+      'sharedLedgers.title': 'Who Can See My Ledger',
+      'sharedLedgers.description': 'Manage who has access to your ledger. You can change permissions or revoke access at any time.',
+      'sharedLedgers.emptyState': 'No one has access to your ledger yet. When someone sends you an invite, it will appear here.',
+      'sharedLedgers.readOnly': 'Read Only',
+      'sharedLedgers.readWrite': 'Read & Write',
+      'sharedLedgers.unknownUser': 'Unknown User',
+      'sharedLedgers.connectedOn': 'Connected on',
+      'sharedLedgers.editPermission': 'edit permission',
+      'sharedLedgers.revoke': 'revoke',
+      'sharedLedgers.editPermissionTitle': 'Edit Permission',
+      'sharedLedgers.editPermissionDescription': 'Choose what {user} can do with your ledger:',
+      'sharedLedgers.thisUser': 'this user',
+      'sharedLedgers.permission': 'Permission',
+      'sharedLedgers.readOnlyOption': 'Read Only - Can view your ledger',
+      'sharedLedgers.readWriteOption': 'Read & Write - Can view and edit your ledger',
+      'sharedLedgers.update': 'Update',
+      'sharedLedgers.revokeConfirm': 'Are you sure you want to revoke this connection? The parent will no longer be able to access your ledger.',
+      'sharedLedgers.errorLoad': 'Failed to load shared ledgers',
+      'sharedLedgers.errorUpdate': 'Failed to update permission',
+      'sharedLedgers.errorRevoke': 'Failed to revoke connection',
       
       // Dashboard
       'dashboard.noGifts': 'No gifts tracked yet',
@@ -252,6 +299,53 @@ const resources = {
       'login.demoMode': 'מצב הדגמה: הקוד יוצג בקונסול הדפדפן (F12)',
       'login.testingOtp': 'קוד לבדיקה:',
       'login.errorSendOtp': 'שליחת הקוד נכשלה. נסה שוב.',
+      'login.errorInvalidOtp': 'קוד לא תקין. אנא בדוק את הקוד ונסה שוב.',
+      
+      // Registration
+      'register.title': 'השלם את הפרופיל שלך',
+      'register.subtitle': 'אנא ספק את הפרטים שלך כדי להשלים את הרישום',
+      'register.firstname': 'שם פרטי',
+      'register.lastname': 'שם משפחה',
+      'register.birthdate': 'תאריך לידה',
+      'register.complete': 'השלם רישום',
+      'register.saving': 'שומר...',
+      'register.errorRequired': 'כל השדות נדרשים',
+      'register.errorSave': 'שמירת הפרופיל נכשלה',
+      
+      // App
+      'app.hello': 'שלום {name}',
+      'app.viewingAs': 'צפייה: {name}',
+      'app.viewMode': 'צפייה בלבד',
+      'app.editMode': 'מצב עריכה',
+      'app.viewModeBanner': 'אתה צופה בפנקס של {name} במצב קריאה בלבד',
+      'app.editModeBanner': 'אתה צופה בפנקס של {name} עם הרשאות עריכה',
+      'app.backToMyLedger': 'חזור לפנקס שלי',
+      
+      // Navigation
+      'nav.sharedLedgers': 'פנקסים משותפים',
+      'nav.sharedWithOthers': 'שיתוף עם אחרים',
+      
+      // Shared Ledgers Page
+      'sharedLedgers.title': 'מי יכול לראות את הפנקס שלי',
+      'sharedLedgers.description': 'נהל מי יש לו גישה לפנקס שלך. אתה יכול לשנות הרשאות או לבטל גישה בכל עת.',
+      'sharedLedgers.emptyState': 'עדיין אין לאף אחד גישה לפנקס שלך. כשמישהו שולח לך הזמנה, היא תופיע כאן.',
+      'sharedLedgers.readOnly': 'קריאה בלבד',
+      'sharedLedgers.readWrite': 'קריאה וכתיבה',
+      'sharedLedgers.unknownUser': 'משתמש לא ידוע',
+      'sharedLedgers.connectedOn': 'מחובר ב',
+      'sharedLedgers.editPermission': 'ערוך הרשאה',
+      'sharedLedgers.revoke': 'בטל',
+      'sharedLedgers.editPermissionTitle': 'ערוך הרשאה',
+      'sharedLedgers.editPermissionDescription': 'בחר מה {user} יכול לעשות עם הפנקס שלך:',
+      'sharedLedgers.thisUser': 'משתמש זה',
+      'sharedLedgers.permission': 'הרשאה',
+      'sharedLedgers.readOnlyOption': 'קריאה בלבד - יכול לצפות בפנקס שלך',
+      'sharedLedgers.readWriteOption': 'קריאה וכתיבה - יכול לצפות ולערוך את הפנקס שלך',
+      'sharedLedgers.update': 'עדכן',
+      'sharedLedgers.revokeConfirm': 'האם אתה בטוח שברצונך לבטל את החיבור הזה? ההורה לא יוכל עוד לגשת לפנקס שלך.',
+      'sharedLedgers.errorLoad': 'טעינת פנקסים משותפים נכשלה',
+      'sharedLedgers.errorUpdate': 'עדכון ההרשאה נכשל',
+      'sharedLedgers.errorRevoke': 'ביטול החיבור נכשל',
       
       // Dashboard
       'dashboard.noGifts': 'אין עדיין מתנות רשומות',

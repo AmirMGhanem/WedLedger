@@ -43,7 +43,7 @@ const CURRENCIES = [
 ];
 
 export default function AddGiftPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, sharedContext } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -71,33 +71,39 @@ export default function AddGiftPage() {
     if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+    // Redirect if trying to add gift with read-only permission
+    if (sharedContext && sharedContext.permission === 'read') {
+      router.push('/dashboard');
+    }
+  }, [user, authLoading, router, sharedContext]);
 
   useEffect(() => {
     if (user) {
       loadAllData();
     }
-  }, [user]);
+  }, [user, sharedContext]);
 
   const loadAllData = async () => {
     if (!user) return;
+    
+    const targetUserId = sharedContext?.childUserId || user.id;
     
     try {
       const [familyResult, eventResult, giftTypeResult] = await Promise.all([
         supabase
           .from('family_members')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
         supabase
           .from('event_types')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
         supabase
           .from('gift_types')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
       ]);
 
@@ -120,6 +126,10 @@ export default function AddGiftPage() {
     setError('');
     setLoading(true);
 
+    if (!user) return;
+
+    const targetUserId = sharedContext?.childUserId || user.id;
+
     try {
       // Validate family member is selected
       if (!formData.giftFrom) {
@@ -131,7 +141,7 @@ export default function AddGiftPage() {
       // Save new event type if it doesn't exist
       if (formData.eventType && !eventTypes.find(et => et.name === formData.eventType)) {
         await supabase.from('event_types').insert({
-          user_id: user!.id,
+          user_id: targetUserId,
           name: formData.eventType,
         });
       }
@@ -139,13 +149,13 @@ export default function AddGiftPage() {
       // Save new gift type if it doesn't exist
       if (formData.giftType && !giftTypes.find(gt => gt.name === formData.giftType)) {
         await supabase.from('gift_types').insert({
-          user_id: user!.id,
+          user_id: targetUserId,
           name: formData.giftType,
         });
       }
 
       const giftData = {
-        user_id: user!.id,
+        user_id: targetUserId,
         date: formData.date,
         amount: parseFloat(formData.amount) || 0,
         to_whom: formData.recipientName,

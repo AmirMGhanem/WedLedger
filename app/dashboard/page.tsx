@@ -61,7 +61,7 @@ const CURRENCIES = [
 ];
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, sharedContext, clearSharedContext } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
   const [gifts, setGifts] = useState<Gift[]>([]);
@@ -108,17 +108,20 @@ export default function DashboardPage() {
     if (user) {
       loadData();
     }
-  }, [user, searchQuery, filterDirection, filterEventType, filterGiftType, filterFamilyMember, sortBy]);
+  }, [user, sharedContext, searchQuery, filterDirection, filterEventType, filterGiftType, filterFamilyMember, sortBy]);
 
   const loadData = async () => {
     if (!user) return;
+    
+    // Use shared context user_id if viewing shared ledger
+    const targetUserId = sharedContext?.childUserId || user.id;
     
     try {
       // Build gifts query with filters
       let giftsQuery = supabase
         .from('gifts')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', targetUserId);
 
       // Apply direction filter
       if (filterDirection !== 'all') {
@@ -166,22 +169,22 @@ export default function DashboardPage() {
           giftsQuery = giftsQuery.order('date', { ascending: false });
       }
 
-      // Load all data for the logged-in user
+      // Load all data for the target user (shared context or logged-in user)
       const [giftsResult, familyResult, eventResult, giftTypeResult] = await Promise.all([
         giftsQuery,
         supabase
           .from('family_members')
           .select('*')
-          .eq('user_id', user.id),
+          .eq('user_id', targetUserId),
         supabase
           .from('event_types')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
         supabase
           .from('gift_types')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
       ]);
 
@@ -250,6 +253,13 @@ export default function DashboardPage() {
 
   const handleEditClick = (e: React.MouseEvent, gift: Gift) => {
     e.stopPropagation();
+    
+    // Check permission
+    if (sharedContext && sharedContext.permission === 'read') {
+      alert('You only have read permission for this ledger');
+      return;
+    }
+    
     setSelectedGift(gift);
     setEditFormData({
       date: gift.date,
@@ -268,16 +278,23 @@ export default function DashboardPage() {
   const handleDeleteClick = async (e: React.MouseEvent, giftId: string) => {
     e.stopPropagation();
     
+    // Check permission
+    if (sharedContext && sharedContext.permission === 'read') {
+      alert('You only have read permission for this ledger');
+      return;
+    }
+    
     if (!confirm(t('giftDetails.deleteConfirm'))) {
       return;
     }
 
     try {
+      const targetUserId = sharedContext?.childUserId || user!.id;
       const { error } = await supabase
         .from('gifts')
         .delete()
         .eq('id', giftId)
-        .eq('user_id', user!.id); // Ensure user owns this gift
+        .eq('user_id', targetUserId);
 
       if (error) throw error;
       
@@ -300,10 +317,18 @@ export default function DashboardPage() {
         return;
       }
 
+      const targetUserId = sharedContext?.childUserId || user!.id;
+      
+      // Check permission for updates
+      if (sharedContext && sharedContext.permission === 'read') {
+        setEditError('You only have read permission for this ledger');
+        return;
+      }
+
       // Save new event type if it doesn't exist
       if (editFormData.eventType && !eventTypes.find(et => et.name === editFormData.eventType)) {
         await supabase.from('event_types').insert({
-          user_id: user!.id,
+          user_id: targetUserId,
           name: editFormData.eventType,
         });
       }
@@ -311,7 +336,7 @@ export default function DashboardPage() {
       // Save new gift type if it doesn't exist
       if (editFormData.giftType && !giftTypes.find(gt => gt.name === editFormData.giftType)) {
         await supabase.from('gift_types').insert({
-          user_id: user!.id,
+          user_id: targetUserId,
           name: editFormData.giftType,
         });
       }
@@ -330,7 +355,7 @@ export default function DashboardPage() {
           notes: editFormData.notes || null,
         })
         .eq('id', selectedGift.id)
-        .eq('user_id', user!.id); // Ensure user owns this gift
+        .eq('user_id', targetUserId);
 
       if (error) throw error;
 
@@ -370,6 +395,39 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Shared Context Banner */}
+        {sharedContext && (
+          <Alert
+            severity="info"
+            onClose={clearSharedContext}
+            sx={{
+              mb: 3,
+              borderRadius: 1,
+              '& .MuiAlert-message': {
+                flex: 1,
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Box>
+                <Typography variant="body2" fontWeight={500}>
+                  Viewing shared ledger: {sharedContext.childPhone}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Permission: {sharedContext.permission === 'read' ? 'Read Only' : 'Read & Write'}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                onClick={clearSharedContext}
+                sx={{ textTransform: 'none', ml: 2 }}
+              >
+                View My Ledger
+              </Button>
+            </Box>
+          </Alert>
+        )}
+        
         {/* Search Bar */}
         <Paper
           sx={{
@@ -739,32 +797,36 @@ export default function DashboardPage() {
                         borderTop: '1px solid rgba(0,0,0,0.05)',
                       }}
                     >
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleEditClick(e, gift)}
-                        sx={{
-                          color: 'primary.main',
-                          p: { xs: 0.5, sm: 0.75 },
-                          '&:hover': {
-                            backgroundColor: 'rgba(233,30,99,0.08)',
-                          },
-                        }}
-                      >
-                        <EditIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleDeleteClick(e, gift.id)}
-                        sx={{
-                          color: 'error.main',
-                          p: { xs: 0.5, sm: 0.75 },
-                          '&:hover': {
-                            backgroundColor: 'rgba(244,67,54,0.08)',
-                          },
-                        }}
-                      >
-                        <DeleteIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                      </IconButton>
+                      {!(sharedContext && sharedContext.permission === 'read') && (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleEditClick(e, gift)}
+                            sx={{
+                              color: 'primary.main',
+                              p: { xs: 0.5, sm: 0.75 },
+                              '&:hover': {
+                                backgroundColor: 'rgba(233,30,99,0.08)',
+                              },
+                            }}
+                          >
+                            <EditIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleDeleteClick(e, gift.id)}
+                            sx={{
+                              color: 'error.main',
+                              p: { xs: 0.5, sm: 0.75 },
+                              '&:hover': {
+                                backgroundColor: 'rgba(244,67,54,0.08)',
+                              },
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                          </IconButton>
+                        </>
+                      )}
                     </Box>
                   </CardContent>
                 </Card>
@@ -772,24 +834,26 @@ export default function DashboardPage() {
           </Box>
         )}
 
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 16, sm: 24 },
-            right: { xs: 16, sm: 24 },
-            width: { xs: 56, sm: 64 },
-            height: { xs: 56, sm: 64 },
-            boxShadow: '0 4px 16px rgba(233,30,99,0.3)',
-            '&:hover': {
-              boxShadow: '0 6px 20px rgba(233,30,99,0.4)',
-            },
-          }}
-          onClick={() => router.push('/add-gift')}
-        >
-          <AddIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
-        </Fab>
+        {!(sharedContext && sharedContext.permission === 'read') && (
+          <Fab
+            color="primary"
+            aria-label="add"
+            sx={{
+              position: 'fixed',
+              bottom: { xs: 16, sm: 24 },
+              right: { xs: 16, sm: 24 },
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
+              boxShadow: '0 4px 16px rgba(233,30,99,0.3)',
+              '&:hover': {
+                boxShadow: '0 6px 20px rgba(233,30,99,0.4)',
+              },
+            }}
+            onClick={() => router.push('/add-gift')}
+          >
+            <AddIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+          </Fab>
+        )}
 
         {/* Preview Modal */}
         <Dialog 

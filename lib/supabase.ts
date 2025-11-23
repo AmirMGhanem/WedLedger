@@ -14,6 +14,9 @@ export type User = {
   id: string;
   phone: string;
   otp_code?: string;
+  firstname?: string;
+  lastname?: string;
+  birthdate?: string;
   created_at: string;
 };
 
@@ -53,4 +56,19 @@ export type GiftType = {
   user_id: string;
   name: string;
   created_at: string;
+};
+
+export type UserConnection = {
+  id: string;
+  parent_user_id: string;
+  child_user_id: string;
+  permission: 'read' | 'read_write';
+  status: 'pending' | 'accepted' | 'revoked';
+  invite_token: string;
+  invite_expires_at: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  parent_user?: User;
+  child_user?: User;
 };
