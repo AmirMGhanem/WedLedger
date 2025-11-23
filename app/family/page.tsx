@@ -26,13 +26,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import LinkIcon from '@mui/icons-material/Link';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import SendIcon from '@mui/icons-material/Send';
-import QrCodeIcon from '@mui/icons-material/QrCode';
-import CheckIcon from '@mui/icons-material/Check';
-import { QRCodeSVG } from 'qrcode.react';
 import { supabase, FamilyMember, UserConnection } from '@/lib/supabase';
 import AppLayout from '@/components/AppLayout';
 
@@ -47,15 +41,7 @@ export default function FamilyPage() {
   const [memberName, setMemberName] = useState('');
   const [memberColor, setMemberColor] = useState('#e91e63'); // Default pink
   const [error, setError] = useState('');
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [childPhone, setChildPhone] = useState('');
-  const [inviteUrl, setInviteUrl] = useState('');
-  const [inviteToken, setInviteToken] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [sendingSMS, setSendingSMS] = useState(false);
   const [connections, setConnections] = useState<UserConnection[]>([]);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [smsSent, setSmsSent] = useState(false);
 
   const COLOR_OPTIONS = [
     { name: t('color.pink'), value: '#e91e63' },
@@ -195,109 +181,6 @@ export default function FamilyPage() {
     }
   };
 
-  const handleOpenLinkDialog = () => {
-    setLinkDialogOpen(true);
-    setChildPhone('');
-    setInviteUrl('');
-    setInviteToken('');
-    setError('');
-  };
-
-  const handleCloseLinkDialog = () => {
-    setLinkDialogOpen(false);
-    setChildPhone('');
-    setInviteUrl('');
-    setInviteToken('');
-    setError('');
-    setLinkCopied(false);
-    setSmsSent(false);
-  };
-
-  const handleGenerateInvite = async () => {
-    if (!childPhone.trim() || !user) {
-      setError('Phone number is required');
-      return;
-    }
-
-    setGenerating(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/invites/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          parentUserId: user.id,
-          childPhone: childPhone.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate invite');
-      }
-
-      setInviteUrl(data.inviteUrl);
-      setInviteToken(data.inviteToken);
-      loadConnections();
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate invite');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (inviteUrl && typeof navigator !== 'undefined') {
-      try {
-        await navigator.clipboard.writeText(inviteUrl);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-    }
-  };
-
-  const handleSendSMS = async () => {
-    if (!inviteUrl || !childPhone || !user) return;
-
-    setSendingSMS(true);
-    setError('');
-    setSmsSent(false);
-
-    try {
-      const response = await fetch('/api/invites/send-sms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: childPhone.trim(),
-          inviteUrl: inviteUrl,
-          parentPhone: user.phone,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send SMS');
-      }
-
-      // Success
-      setSmsSent(true);
-      setError('');
-      setTimeout(() => setSmsSent(false), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send SMS');
-    } finally {
-      setSendingSMS(false);
-    }
-  };
 
   const handleRevokeConnection = async (connectionId: string) => {
     if (!confirm('Are you sure you want to revoke this connection? You will no longer be able to access this child\'s ledger.')) {
@@ -389,19 +272,6 @@ export default function FamilyPage() {
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<LinkIcon />}
-                onClick={handleOpenLinkDialog}
-                sx={{
-                  borderRadius: 1,
-                  fontWeight: 500,
-                  fontSize: { xs: '0.875rem', sm: '0.95rem' },
-                  textTransform: 'none',
-                }}
-              >
-                Link User
-              </Button>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -569,201 +439,6 @@ export default function FamilyPage() {
             </Box>
           )}
         </Paper>
-
-        <Dialog
-          open={linkDialogOpen}
-          onClose={handleCloseLinkDialog}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-            },
-          }}
-        >
-          <DialogTitle
-            sx={{
-              pb: 1,
-              fontSize: { xs: '1.1rem', sm: '1.25rem' },
-              fontWeight: 600,
-            }}
-          >
-            {inviteUrl ? 'Share Invite Link' : 'Link User'}
-          </DialogTitle>
-          <DialogContent>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            {!inviteUrl ? (
-              <>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 3, textAlign: 'center' }}
-                >
-                  Enter the phone number of the user you want to link with. They
-                  will receive an invite to share their ledger with you.
-                </Typography>
-                <TextField
-                  autoFocus
-                  fullWidth
-                  label="Phone Number"
-                  type="tel"
-                  value={childPhone}
-                  onChange={(e) => setChildPhone(e.target.value)}
-                  placeholder="e.g., 0512345678"
-                  sx={{
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 1,
-                    },
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-                  Invite link generated! Share it via QR code, link, or SMS.
-                </Typography>
-
-                {/* QR Code Section */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mb: 3,
-                    p: 3,
-                    bgcolor: '#fafafa',
-                    borderRadius: 1,
-                    border: '1px solid #e5e7eb',
-                  }}
-                >
-                  <QRCodeSVG
-                    value={inviteUrl}
-                    size={200}
-                    level="H"
-                    includeMargin={true}
-                  />
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 2, textAlign: 'center' }}
-                  >
-                    Scan to open invite link
-                  </Typography>
-                </Box>
-
-                {/* Link Section */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography
-                    variant="caption"
-                    fontWeight={500}
-                    color="text.secondary"
-                    sx={{ mb: 1, display: 'block' }}
-                  >
-                    Or share this link:
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 1,
-                      alignItems: 'center',
-                      p: 1.5,
-                      bgcolor: '#f9fafb',
-                      borderRadius: 1,
-                      border: '1px solid #e5e7eb',
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        flex: 1,
-                        wordBreak: 'break-all',
-                        fontFamily: 'monospace',
-                        fontSize: '0.75rem',
-                        color: '#6b7280',
-                      }}
-                    >
-                      {inviteUrl}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={handleCopyLink}
-                      sx={{
-                        flexShrink: 0,
-                        color: linkCopied ? '#10b981' : '#6b7280',
-                      }}
-                    >
-                      {linkCopied ? (
-                        <CheckIcon fontSize="small" />
-                      ) : (
-                        <ContentCopyIcon fontSize="small" />
-                      )}
-                    </IconButton>
-                  </Box>
-                  {linkCopied && (
-                    <Typography
-                      variant="caption"
-                      sx={{ mt: 0.5, display: 'block', color: '#10b981' }}
-                    >
-                      Link copied!
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* SMS Section */}
-                <Box>
-                  <Button
-                    variant="outlined"
-                    startIcon={smsSent ? <CheckIcon /> : <SendIcon />}
-                    onClick={handleSendSMS}
-                    disabled={sendingSMS || !childPhone}
-                    fullWidth
-                    sx={{
-                      borderRadius: 1,
-                      textTransform: 'none',
-                      borderColor: smsSent ? '#10b981' : undefined,
-                      color: smsSent ? '#10b981' : undefined,
-                    }}
-                  >
-                    {smsSent
-                      ? 'SMS Sent!'
-                      : sendingSMS
-                      ? 'Sending...'
-                      : 'Send via SMS'}
-                  </Button>
-                  {smsSent && (
-                    <Typography
-                      variant="caption"
-                      sx={{ mt: 0.5, display: 'block', textAlign: 'center', color: '#10b981' }}
-                    >
-                      SMS sent successfully to {childPhone}
-                    </Typography>
-                  )}
-                </Box>
-              </>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5 }}>
-            <Button onClick={handleCloseLinkDialog} sx={{ borderRadius: 1, textTransform: 'none' }}>
-              {inviteUrl ? 'Close' : 'Cancel'}
-            </Button>
-            {!inviteUrl && (
-              <Button
-                onClick={handleGenerateInvite}
-                variant="contained"
-                disabled={generating || !childPhone.trim()}
-                sx={{ borderRadius: 1, textTransform: 'none' }}
-              >
-                {generating ? 'Generating...' : 'Generate Link'}
-              </Button>
-            )}
-          </DialogActions>
-        </Dialog>
 
         <Dialog 
           open={dialogOpen} 

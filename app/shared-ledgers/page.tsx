@@ -25,9 +25,15 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  TextField,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LinkIcon from '@mui/icons-material/Link';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SendIcon from '@mui/icons-material/Send';
+import CheckIcon from '@mui/icons-material/Check';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase, UserConnection } from '@/lib/supabase';
 import AppLayout from '@/components/AppLayout';
 
@@ -41,6 +47,15 @@ export default function SharedLedgersPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<UserConnection | null>(null);
   const [selectedPermission, setSelectedPermission] = useState<'read' | 'read_write'>('read');
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [parentPhone, setParentPhone] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [inviteToken, setInviteToken] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [sendingSMS, setSendingSMS] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [smsSent, setSmsSent] = useState(false);
+  const [sharePermission, setSharePermission] = useState<'read' | 'read_write'>('read');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -145,6 +160,113 @@ export default function SharedLedgersPage() {
     }
   };
 
+  const handleOpenLinkDialog = () => {
+    setLinkDialogOpen(true);
+    setParentPhone('');
+    setInviteUrl('');
+    setInviteToken('');
+    setError('');
+    setLinkCopied(false);
+    setSmsSent(false);
+    setSharePermission('read');
+  };
+
+  const handleCloseLinkDialog = () => {
+    setLinkDialogOpen(false);
+    setParentPhone('');
+    setInviteUrl('');
+    setInviteToken('');
+    setError('');
+    setLinkCopied(false);
+    setSmsSent(false);
+  };
+
+  const handleGenerateInvite = async () => {
+    if (!parentPhone.trim() || !user) {
+      setError(t('sharedLedgers.errorPhoneRequired'));
+      return;
+    }
+
+    setGenerating(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/invites/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          childUserId: user.id,
+          parentPhone: parentPhone.trim(),
+          permission: sharePermission,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || t('sharedLedgers.errorGenerate'));
+      }
+
+      setInviteUrl(data.inviteUrl);
+      setInviteToken(data.inviteToken);
+      loadConnections();
+    } catch (err: any) {
+      setError(err.message || t('sharedLedgers.errorGenerate'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (inviteUrl && typeof navigator !== 'undefined') {
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
+  const handleSendSMS = async () => {
+    if (!inviteUrl || !parentPhone || !user) return;
+
+    setSendingSMS(true);
+    setError('');
+    setSmsSent(false);
+
+    try {
+      const response = await fetch('/api/invites/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: parentPhone.trim(),
+          inviteUrl: inviteUrl,
+          childPhone: user.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || t('sharedLedgers.errorSendSMS'));
+      }
+
+      setSmsSent(true);
+      setError('');
+      setTimeout(() => setSmsSent(false), 3000);
+    } catch (err: any) {
+      setError(err.message || t('sharedLedgers.errorSendSMS'));
+    } finally {
+      setSendingSMS(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <Box
@@ -190,6 +312,25 @@ export default function SharedLedgersPage() {
           >
             {t('sharedLedgers.description')}
           </Typography>
+
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="contained"
+              startIcon={<LinkIcon />}
+              onClick={handleOpenLinkDialog}
+              sx={{
+                borderRadius: 1,
+                fontWeight: 600,
+                textTransform: 'none',
+                backgroundColor: '#667eea',
+                '&:hover': {
+                  backgroundColor: '#5568d3',
+                },
+              }}
+            >
+              {t('sharedLedgers.shareLedger')}
+            </Button>
+          </Box>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -327,6 +468,212 @@ export default function SharedLedgersPage() {
               >
                 {t('sharedLedgers.update')}
               </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Share Ledger Dialog */}
+          <Dialog
+            open={linkDialogOpen}
+            onClose={handleCloseLinkDialog}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+              },
+            }}
+          >
+            <DialogTitle
+              sx={{
+                pb: 1,
+                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                fontWeight: 600,
+              }}
+            >
+              {inviteUrl ? t('sharedLedgers.shareInviteTitle') : t('sharedLedgers.shareLedgerTitle')}
+            </DialogTitle>
+            <DialogContent>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {!inviteUrl ? (
+                <>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 3, textAlign: 'center' }}
+                  >
+                    {t('sharedLedgers.shareDescription')}
+                  </Typography>
+                  <TextField
+                    autoFocus
+                    fullWidth
+                    label={t('sharedLedgers.parentPhoneLabel')}
+                    type="tel"
+                    value={parentPhone}
+                    onChange={(e) => setParentPhone(e.target.value)}
+                    placeholder={t('sharedLedgers.parentPhonePlaceholder')}
+                    sx={{
+                      mb: 2,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1,
+                      },
+                    }}
+                  />
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>{t('sharedLedgers.permission')}</InputLabel>
+                    <Select
+                      value={sharePermission}
+                      label={t('sharedLedgers.permission')}
+                      onChange={(e) => setSharePermission(e.target.value as 'read' | 'read_write')}
+                    >
+                      <MenuItem value="read">{t('sharedLedgers.readOnlyOption')}</MenuItem>
+                      <MenuItem value="read_write">{t('sharedLedgers.readWriteOption')}</MenuItem>
+                    </Select>
+                  </FormControl>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+                    {t('sharedLedgers.inviteGenerated')}
+                  </Typography>
+
+                  {/* QR Code Section */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      mb: 3,
+                      p: 3,
+                      bgcolor: '#fafafa',
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                    }}
+                  >
+                    <QRCodeSVG
+                      value={inviteUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={true}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 2, textAlign: 'center' }}
+                    >
+                      {t('sharedLedgers.scanQR')}
+                    </Typography>
+                  </Box>
+
+                  {/* Link Section */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="caption"
+                      fontWeight={500}
+                      color="text.secondary"
+                      sx={{ mb: 1, display: 'block' }}
+                    >
+                      {t('sharedLedgers.orShareLink')}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'center',
+                        p: 1.5,
+                        bgcolor: '#f9fafb',
+                        borderRadius: 1,
+                        border: '1px solid #e5e7eb',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          wordBreak: 'break-all',
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          color: '#6b7280',
+                        }}
+                      >
+                        {inviteUrl}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={handleCopyLink}
+                        sx={{
+                          flexShrink: 0,
+                          color: linkCopied ? '#10b981' : '#6b7280',
+                        }}
+                      >
+                        {linkCopied ? (
+                          <CheckIcon fontSize="small" />
+                        ) : (
+                          <ContentCopyIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Box>
+                    {linkCopied && (
+                      <Typography
+                        variant="caption"
+                        sx={{ mt: 0.5, display: 'block', color: '#10b981' }}
+                      >
+                        {t('sharedLedgers.linkCopied')}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* SMS Section */}
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      startIcon={smsSent ? <CheckIcon /> : <SendIcon />}
+                      onClick={handleSendSMS}
+                      disabled={sendingSMS || !parentPhone}
+                      fullWidth
+                      sx={{
+                        borderRadius: 1,
+                        textTransform: 'none',
+                        borderColor: smsSent ? '#10b981' : undefined,
+                        color: smsSent ? '#10b981' : undefined,
+                      }}
+                    >
+                      {smsSent
+                        ? t('sharedLedgers.smsSent')
+                        : sendingSMS
+                        ? t('sharedLedgers.sending')
+                        : t('sharedLedgers.sendSMS')}
+                    </Button>
+                    {smsSent && (
+                      <Typography
+                        variant="caption"
+                        sx={{ mt: 0.5, display: 'block', textAlign: 'center', color: '#10b981' }}
+                      >
+                        {t('sharedLedgers.smsSentTo').replace('{phone}', parentPhone)}
+                      </Typography>
+                    )}
+                  </Box>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2.5 }}>
+              <Button onClick={handleCloseLinkDialog} sx={{ borderRadius: 1, textTransform: 'none' }}>
+                {inviteUrl ? t('common.close') : t('common.cancel')}
+              </Button>
+              {!inviteUrl && (
+                <Button
+                  onClick={handleGenerateInvite}
+                  variant="contained"
+                  disabled={generating || !parentPhone.trim()}
+                  sx={{ borderRadius: 1, textTransform: 'none' }}
+                >
+                  {generating ? t('sharedLedgers.generating') : t('sharedLedgers.generateLink')}
+                </Button>
+              )}
             </DialogActions>
           </Dialog>
         </Paper>

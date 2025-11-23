@@ -40,7 +40,7 @@ import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import { GrMoney } from "react-icons/gr";
 
 export default function AnalyticsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, sharedContext } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
   const [gifts, setGifts] = useState<Gift[]>([]);
@@ -61,7 +61,7 @@ export default function AnalyticsPage() {
       loadData();
       fetchExchangeRates();
     }
-  }, [user]);
+  }, [user, sharedContext]);
 
   const fetchExchangeRates = async () => {
     try {
@@ -92,17 +92,20 @@ export default function AnalyticsPage() {
   const loadData = async () => {
     if (!user) return;
     
+    // Use shared context child user ID if viewing shared ledger, otherwise use own user ID
+    const targetUserId = sharedContext?.childUserId || user.id;
+    
     try {
       const [giftsResult, familyResult] = await Promise.all([
         supabase
           .from('gifts')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .order('date', { ascending: true }),
         supabase
           .from('family_members')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
       ]);
 
       if (giftsResult.error) throw giftsResult.error;

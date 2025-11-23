@@ -138,23 +138,23 @@ export async function DELETE(
       );
     }
 
-    // Update status to revoked instead of deleting (for audit trail)
-    const { error: updateError } = await supabase
+    // Delete the connection completely
+    const { error: deleteError } = await supabase
       .from('user_connections')
-      .update({ status: 'revoked' })
+      .delete()
       .eq('id', connectionId);
 
-    if (updateError) {
-      console.error('Error revoking connection:', updateError);
+    if (deleteError) {
+      console.error('Error deleting connection:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to revoke connection' },
+        { error: 'Failed to delete connection' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Connection revoked successfully',
+      message: 'Connection deleted successfully',
     });
   } catch (error: any) {
     console.error('Error in revoke connection endpoint:', error);

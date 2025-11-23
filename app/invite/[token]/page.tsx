@@ -10,11 +10,6 @@ import {
   Typography,
   Box,
   Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  FormLabel,
   Alert,
   CircularProgress,
 } from '@mui/material';
@@ -35,6 +30,10 @@ type InviteConnection = {
     id: string;
     phone: string;
   };
+  child_user?: {
+    id: string;
+    phone: string;
+  };
 };
 
 export default function InvitePage() {
@@ -47,7 +46,6 @@ export default function InvitePage() {
   const [connection, setConnection] = useState<InviteConnection | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [permission, setPermission] = useState<'read' | 'read_write'>('read');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -75,8 +73,8 @@ export default function InvitePage() {
         return;
       }
 
-      // Verify this invite is for the current user
-      if (data.connection && data.connection.child_user_id !== user.id) {
+      // Verify this invite is for the current user (parent accepts from child)
+      if (data.connection && data.connection.parent_user_id !== user.id) {
         setError('This invite is not for your account');
         return;
       }
@@ -103,8 +101,7 @@ export default function InvitePage() {
         },
         body: JSON.stringify({
           token: connection.invite_token,
-          permission: permission,
-          childUserId: user.id,
+          parentUserId: user.id,
         }),
       });
 
@@ -160,10 +157,10 @@ export default function InvitePage() {
               sx={{ fontSize: 64, color: '#10b981', mb: 2 }}
             />
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-              Invite Accepted!
+              {t('invite.accepted')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              You have successfully linked your ledger. Redirecting...
+              {t('invite.acceptedDesc')}
             </Typography>
           </Paper>
         </Container>
@@ -184,7 +181,7 @@ export default function InvitePage() {
           >
             <CancelIcon sx={{ fontSize: 64, color: '#ef4444', mb: 2 }} />
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-              Invalid Invite
+              {t('invite.invalid')}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
               {error}
@@ -193,7 +190,7 @@ export default function InvitePage() {
               variant="contained"
               onClick={() => router.push('/dashboard')}
             >
-              Go to Dashboard
+              {t('invite.goToDashboard')}
             </Button>
           </Paper>
         </Container>
@@ -205,7 +202,7 @@ export default function InvitePage() {
     return null;
   }
 
-  const parentPhone = connection.parent_user?.phone || 'Unknown';
+  const childPhone = connection.child_user?.phone || 'Unknown';
 
   return (
     <AppLayout>
@@ -220,15 +217,15 @@ export default function InvitePage() {
             variant="h5"
             sx={{ mb: 1, fontWeight: 600 }}
           >
-            Connection Request
+            {t('invite.connectionRequest')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            {parentPhone} wants to link with your ledger
+            {t('invite.shareRequest').replace('{name}', childPhone)}
           </Typography>
 
           {connection.isExpired && (
             <Alert severity="error" sx={{ mb: 3 }}>
-              This invite has expired. Please request a new one.
+              {t('invite.expired')}
             </Alert>
           )}
 
@@ -238,50 +235,30 @@ export default function InvitePage() {
             </Alert>
           )}
 
-          <FormControl component="fieldset" sx={{ mb: 4, width: '100%' }}>
-            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500 }}>
-              Choose Permission Level
-            </FormLabel>
-            <RadioGroup
-              value={permission}
-              onChange={(e) =>
-                setPermission(e.target.value as 'read' | 'read_write')
-              }
-            >
-              <FormControlLabel
-                value="read"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>
-                      Read Only
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      They can view your gifts and family members, but cannot
-                      make changes
-                    </Typography>
-                  </Box>
-                }
-                sx={{ mb: 2, alignItems: 'flex-start' }}
-              />
-              <FormControlLabel
-                value="read_write"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>
-                      Read & Write
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      They can view, add, edit, and delete your gifts and
-                      family members
-                    </Typography>
-                  </Box>
-                }
-                sx={{ alignItems: 'flex-start' }}
-              />
-            </RadioGroup>
-          </FormControl>
+          {/* Show permission level set by child */}
+          <Box
+            sx={{
+              mb: 4,
+              p: 2,
+              bgcolor: connection.permission === 'read' ? '#fef3c7' : '#dbeafe',
+              borderRadius: 1,
+              border: `1px solid ${connection.permission === 'read' ? '#fbbf24' : '#60a5fa'}`,
+            }}
+          >
+            <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+              {t('invite.permissionLevel')}
+            </Typography>
+            <Typography variant="body1" fontWeight={500} sx={{ mb: 0.5 }}>
+              {connection.permission === 'read'
+                ? t('invite.readOnly')
+                : t('invite.readWrite')}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {connection.permission === 'read'
+                ? t('invite.readOnlyDesc')
+                : t('invite.readWriteDesc')}
+            </Typography>
+          </Box>
 
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
@@ -291,7 +268,7 @@ export default function InvitePage() {
               disabled={submitting}
               sx={{ borderRadius: 1 }}
             >
-              Decline
+              {t('invite.decline')}
             </Button>
             <Button
               variant="contained"
@@ -300,7 +277,7 @@ export default function InvitePage() {
               disabled={submitting || connection.isExpired}
               sx={{ borderRadius: 1 }}
             >
-              {submitting ? 'Accepting...' : 'Accept'}
+              {submitting ? t('invite.accepting') : t('invite.accept')}
             </Button>
           </Box>
         </Paper>

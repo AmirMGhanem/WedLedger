@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, permission, childUserId } = body;
+    const { token, parentUserId } = body;
 
     // Validate inputs
     if (!token || typeof token !== 'string') {
@@ -18,26 +18,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!permission || !['read', 'read_write'].includes(permission)) {
+    if (!parentUserId || typeof parentUserId !== 'string') {
       return NextResponse.json(
-        { error: 'Valid permission (read or read_write) is required' },
+        { error: 'Parent user ID is required' },
         { status: 400 }
       );
     }
 
-    if (!childUserId || typeof childUserId !== 'string') {
-      return NextResponse.json(
-        { error: 'Child user ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Find connection by token
+    // Find connection by token (parent accepts from child)
     const { data: connection, error: fetchError } = await supabase
       .from('user_connections')
       .select('*')
       .eq('invite_token', token)
-      .eq('child_user_id', childUserId)
+      .eq('parent_user_id', parentUserId)
       .maybeSingle();
 
     if (fetchError) {
@@ -80,12 +73,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update connection to accepted with chosen permission
+    // Update connection to accepted (permission was already set by child when generating invite)
     const { data: updatedConnection, error: updateError } = await supabase
       .from('user_connections')
       .update({
         status: 'accepted',
-        permission: permission,
+        // Permission is already set by child, don't change it
       })
       .eq('id', connection.id)
       .select()
@@ -99,18 +92,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get parent user info for response
-    const { data: parentUser } = await supabase
+    // Get child user info for response
+    const { data: childUser } = await supabase
       .from('users')
       .select('id, phone')
-      .eq('id', connection.parent_user_id)
+      .eq('id', connection.child_user_id)
       .single();
 
     return NextResponse.json({
       success: true,
       message: 'Invite accepted successfully',
       connection: updatedConnection,
-      parentUser: parentUser || null,
+      childUser: childUser || null,
     });
   } catch (error: any) {
     console.error('Error in accept invite endpoint:', error);
@@ -137,12 +130,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find connection by token
+    // Find connection by token (parent accepts from child)
     const { data: connection, error: fetchError } = await supabase
       .from('user_connections')
       .select(`
         *,
-        parent_user:users!user_connections_parent_user_id_fkey(id, phone)
+        parent_user:users!user_connections_parent_user_id_fkey(id, phone),
+        child_user:users!user_connections_child_user_id_fkey(id, phone)
       `)
       .eq('invite_token', token)
       .maybeSingle();

@@ -4,47 +4,54 @@ import { randomUUID } from 'crypto';
 
 /**
  * POST /api/invites/generate
- * Generates an invite link for linking a child user
+ * Generates an invite link for sharing ledger (child shares with parent)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { parentUserId, childPhone } = body;
+    const { childUserId, parentPhone, permission } = body;
 
     // Validate inputs
-    if (!parentUserId || typeof parentUserId !== 'string') {
+    if (!childUserId || typeof childUserId !== 'string') {
       return NextResponse.json(
-        { error: 'Parent user ID is required' },
+        { error: 'Child user ID is required' },
         { status: 400 }
       );
     }
 
-    if (!childPhone || typeof childPhone !== 'string') {
+    if (!parentPhone || typeof parentPhone !== 'string') {
       return NextResponse.json(
-        { error: 'Child phone number is required' },
+        { error: 'Parent phone number is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!permission || !['read', 'read_write'].includes(permission)) {
+      return NextResponse.json(
+        { error: 'Valid permission (read or read_write) is required' },
         { status: 400 }
       );
     }
 
     // Clean phone number
-    const cleanChildPhone = childPhone.replace(/[\s-]/g, '');
+    const cleanParentPhone = parentPhone.replace(/[\s-]/g, '');
 
-    // Check if child user exists
-    const { data: childUser, error: childError } = await supabase
+    // Check if parent user exists
+    const { data: parentUser, error: parentError } = await supabase
       .from('users')
       .select('id, phone')
-      .eq('phone', cleanChildPhone)
+      .eq('phone', cleanParentPhone)
       .maybeSingle();
 
-    if (childError) {
-      console.error('Error fetching child user:', childError);
+    if (parentError) {
+      console.error('Error fetching parent user:', parentError);
       return NextResponse.json(
         { error: 'Database error occurred' },
         { status: 500 }
       );
     }
 
-    if (!childUser) {
+    if (!parentUser) {
       return NextResponse.json(
         { error: 'User with this phone number not found' },
         { status: 404 }
@@ -55,8 +62,8 @@ export async function POST(request: NextRequest) {
     const { data: existingConnection } = await supabase
       .from('user_connections')
       .select('id, status')
-      .eq('parent_user_id', parentUserId)
-      .eq('child_user_id', childUser.id)
+      .eq('parent_user_id', parentUser.id)
+      .eq('child_user_id', childUserId)
       .maybeSingle();
 
     if (existingConnection) {
@@ -77,12 +84,13 @@ export async function POST(request: NextRequest) {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     // Create connection record with pending status
+    // Permission is set by child when generating invite
     const { data: connection, error: insertError } = await supabase
       .from('user_connections')
       .insert({
-        parent_user_id: parentUserId,
-        child_user_id: childUser.id,
-        permission: 'read', // Default, will be updated when child accepts
+        parent_user_id: parentUser.id,
+        child_user_id: childUserId,
+        permission: permission, // Set by child
         status: 'pending',
         invite_token: inviteToken,
         invite_expires_at: expiresAt.toISOString(),
@@ -109,9 +117,9 @@ export async function POST(request: NextRequest) {
       inviteToken,
       inviteUrl,
       expiresAt: expiresAt.toISOString(),
-      childUser: {
-        id: childUser.id,
-        phone: childUser.phone,
+      parentUser: {
+        id: parentUser.id,
+        phone: parentUser.phone,
       },
     });
   } catch (error: any) {

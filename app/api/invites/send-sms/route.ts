@@ -8,7 +8,7 @@ import { sendSMS } from '@/lib/sms';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, inviteUrl, parentPhone } = body;
+    const { phone, inviteUrl, childPhone } = body;
 
     if (!phone || typeof phone !== 'string') {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const message = `Hi! ${parentPhone || 'Someone'} wants to link with your WedLedger account. Click here to accept: ${inviteUrl}`;
+    const message = `Hi! ${childPhone || 'Someone'} wants to share their WedLedger with you. Click here to accept: ${inviteUrl}`;
 
     const smsResult = await sendSMS({
       recipient: phone,
