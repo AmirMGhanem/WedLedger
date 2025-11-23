@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Removed 'output: export' to enable API routes for SMS OTP functionality
+  // If you need static export, deploy API routes as serverless functions separately
   eslint: {
     ignoreDuringBuilds: true,
   },

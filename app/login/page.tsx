@@ -20,7 +20,6 @@ export default function LoginPage() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [generatedOtp, setGeneratedOtp] = useState('');
   const { signInWithOtp, verifyOtp } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
@@ -31,8 +30,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const otpCode = await signInWithOtp(phone);
-      setGeneratedOtp(otpCode);
+      await signInWithOtp(phone);
       setStep('otp');
     } catch (err: any) {
       setError(err.message || t('login.errorSendOtp'));
@@ -50,7 +48,7 @@ export default function LoginPage() {
       await verifyOtp(phone, otp);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. This is a demo - OTP verification may not work without proper setup.');
+      setError(err.message || 'Invalid OTP. Please check the code and try again.');
     } finally {
       setLoading(false);
     }
@@ -185,35 +183,6 @@ export default function LoginPage() {
                 helperText={t('login.otpHelper')}
               />
 
-              {generatedOtp && (
-                <Alert 
-                  severity="info" 
-                  sx={{ 
-                    mb: { xs: 2.5, sm: 3 },
-                    borderRadius: 2,
-                    bgcolor: 'rgba(233,30,99,0.08)',
-                    border: '1px solid rgba(233,30,99,0.2)',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                      {t('login.testingOtp')}
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 700,
-                        color: 'primary.main',
-                        letterSpacing: 3,
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {generatedOtp}
-                    </Typography>
-                  </Box>
-                </Alert>
-              )}
-
               <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 } }}>
                 <Button
                   fullWidth
@@ -257,18 +226,6 @@ export default function LoginPage() {
             </form>
           )}
 
-          <Typography
-            variant="caption"
-            sx={{ 
-              mt: { xs: 2.5, sm: 3 },
-              display: 'block',
-              textAlign: 'center',
-              color: 'text.secondary',
-              fontSize: { xs: '0.7rem', sm: '0.75rem' }
-            }}
-          >
-            {t('login.demoMode')}
-          </Typography>
         </Paper>
       </Container>
     </Box>

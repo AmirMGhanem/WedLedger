@@ -7,23 +7,12 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 type AuthContextType = {
   user: SupabaseUser | null;
   loading: boolean;
-  signInWithOtp: (phone: string) => Promise<string>; // Returns OTP for testing
+  signInWithOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, otp: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Demo mode - generates consistent user ID from phone number
-const generateUserId = (phone: string): string => {
-  let hash = 0;
-  for (let i = 0; i < phone.length; i++) {
-    hash = ((hash << 5) - hash) + phone.charCodeAt(i);
-    hash = hash & hash;
-  }
-  const hex = Math.abs(hash).toString(16).padStart(32, '0');
-  return `${hex.substring(0, 8)}-${hex.substring(8, 12)}-4${hex.substring(12, 15)}-a${hex.substring(15, 18)}-${hex.substring(18, 30)}`;
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -49,58 +38,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const signInWithOtp = async (phone: string): Promise<string> => {
+  const signInWithOtp = async (phone: string): Promise<void> => {
     try {
-      console.log('📱 Generating OTP for:', phone);
+      console.log('📱 Sending OTP to:', phone);
       
-      // Generate random 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Check if user exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('phone', phone)
-        .maybeSingle();
+      // Call API endpoint to send OTP via SMS
+      const response = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone }),
+      });
 
-      if (existingUser) {
-        // Update existing user with new OTP
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ otp_code: otp })
-          .eq('phone', phone);
+      const data = await response.json();
 
-        if (updateError) {
-          console.error('❌ Error updating OTP:', updateError);
-          throw new Error('Failed to generate OTP');
-        }
-        
-        console.log('✅ OTP updated for existing user');
-      } else {
-        // Create new user with OTP
-        const userId = generateUserId(phone);
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: userId,
-            phone: phone,
-            otp_code: otp,
-          });
-
-        if (insertError) {
-          console.error('❌ Error creating user:', insertError);
-          throw new Error('Failed to create user account');
-        }
-        
-        console.log('✅ New user created with OTP');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send OTP');
       }
-      
-      // In a real app, you would send this OTP via SMS
-      // For demo purposes, we'll log it to console
-      console.log('🔑 OTP Code:', otp);
-      console.log('⚠️ In production, this would be sent via SMS');
-      
-      return otp; // Return OTP for testing display
+
+      console.log('✅ OTP sent successfully via SMS');
+      console.log('📬 Recipients:', data.recipients);
       
     } catch (err: any) {
       console.error('❌ Error in signInWithOtp:', err);
@@ -112,68 +70,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔐 Verifying OTP for:', phone);
 
-      // Check if user exists and get their stored OTP
-      const { data: dbUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone', phone)
-        .maybeSingle();
+      // Call API endpoint to verify OTP
+      const response = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone, otp }),
+      });
 
-      if (fetchError) {
-        console.error('❌ Error fetching user:', fetchError);
-        throw new Error('Failed to verify OTP. Please try again.');
-      }
+      const data = await response.json();
 
-      if (!dbUser) {
-        console.error('❌ User not found');
-        throw new Error('User not found. Please request OTP first.');
-      }
-
-      // Verify OTP matches
-      if (dbUser.otp_code !== otp) {
-        console.error('❌ Invalid OTP provided');
-        throw new Error('Invalid OTP. Please check the code and try again.');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify OTP');
       }
 
       console.log('✅ OTP verified successfully!');
 
-      // Clear OTP after successful verification (optional - for security)
-      await supabase
-        .from('users')
-        .update({ otp_code: null })
-        .eq('id', dbUser.id);
-
-      // Load user's related data
-      console.log('📊 Loading user data...');
-      
-      const [familyResult, giftsResult] = await Promise.all([
-        supabase
-          .from('family_members')
-          .select('*')
-          .eq('user_id', dbUser.id),
-        supabase
-          .from('gifts')
-          .select('*')
-          .eq('user_id', dbUser.id)
-      ]);
-
-      const familyCount = familyResult.data?.length || 0;
-      const giftsCount = giftsResult.data?.length || 0;
-      
-      console.log(`✅ Loaded ${familyCount} family members, ${giftsCount} gifts`);
-
-      // Create user session object
+      // Create user session object from API response
       const userSession: SupabaseUser = {
-        id: dbUser.id,
-        phone: phone,
+        id: data.user.id,
+        phone: data.user.phone,
         app_metadata: {},
         user_metadata: { 
-          phone,
-          familyCount,
-          giftsCount,
+          phone: data.user.phone,
+          familyCount: data.user.familyCount,
+          giftsCount: data.user.giftsCount,
         },
         aud: 'authenticated',
-        created_at: dbUser.created_at || new Date().toISOString(),
+        created_at: new Date().toISOString(),
         email: undefined,
       } as SupabaseUser;
 
@@ -185,8 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('🎉 Authentication successful!');
-      console.log('👤 User ID:', dbUser.id);
-      console.log('📱 Phone:', phone);
+      console.log('👤 User ID:', data.user.id);
+      console.log('📱 Phone:', data.user.phone);
+      console.log(`📊 Family: ${data.user.familyCount}, Gifts: ${data.user.giftsCount}`);
       
     } catch (err: any) {
       console.error('❌ Authentication error:', err);
