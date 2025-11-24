@@ -84,3 +84,14 @@ export type Notification = {
   created_at: string;
   updated_at: string;
 };
+
+export type FutureEvent = {
+  id: string;
+  user_id: string;
+  name: string;
+  event_type?: string;
+  date: string; // ISO date string (YYYY-MM-DD)
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+};

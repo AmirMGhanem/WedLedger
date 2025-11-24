@@ -105,6 +105,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       showInShared: true, // Show when viewing shared ledger
     },
     {
+      text: t('nav.futureEvents'),
+      icon: <EventIcon />,
+      path: '/future-events',
+      showInShared: false, // Not shareable context
+    },
+    {
       text: t('nav.familyMembers'),
       icon: <PeopleIcon />,
       path: '/family',

@@ -22,11 +22,15 @@ import {
   FormHelperText,
   Chip,
   Autocomplete,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
-import { supabase, FamilyMember, EventType, GiftType } from '@/lib/supabase';
+import { supabase, FamilyMember, EventType, GiftType, FutureEvent } from '@/lib/supabase';
+import { addDays, parseISO, isAfter } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 
 const CURRENCIES = [
@@ -52,8 +56,11 @@ export default function AddGiftPage() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
+  const [futureEvents, setFutureEvents] = useState<FutureEvent[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [childUser, setChildUser] = useState<{ firstname?: string; lastname?: string } | null>(null);
+  const [eventSource, setEventSource] = useState<'manual' | 'upcoming'>('manual');
+  const [selectedUpcomingEvent, setSelectedUpcomingEvent] = useState<string>('');
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -81,6 +88,9 @@ export default function AddGiftPage() {
   useEffect(() => {
     if (user) {
       loadAllData();
+      if (!sharedContext) {
+        loadFutureEvents();
+      }
     }
   }, [user, sharedContext]);
 
@@ -132,6 +142,62 @@ export default function AddGiftPage() {
       console.error('Error loading data:', error);
     } finally {
       setLoadingMembers(false);
+    }
+  };
+
+  const loadFutureEvents = async () => {
+    if (!user?.id || sharedContext) return; // Not shareable
+    
+    try {
+      const response = await fetch(`/api/future-events?userId=${user.id}`);
+      const data = await response.json();
+      if (response.ok) {
+        setFutureEvents(data.events || []);
+      }
+    } catch (error) {
+      console.error('Error loading future events:', error);
+    }
+  };
+
+  // Filter events to show only from 2 days ago onwards
+  const getAvailableEvents = () => {
+    const now = new Date();
+    const twoDaysAgo = addDays(now, -2);
+    
+    return futureEvents
+      .filter((event) => {
+        const eventDate = parseISO(event.date);
+        return isAfter(eventDate, twoDaysAgo);
+      })
+      .sort((a, b) => {
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+  };
+
+  const handleEventSourceChange = (value: 'manual' | 'upcoming') => {
+    setEventSource(value);
+    if (value === 'manual') {
+      setSelectedUpcomingEvent('');
+      setFormData({
+        ...formData,
+        eventType: '',
+        recipientName: '',
+      });
+    }
+  };
+
+  const handleUpcomingEventSelect = (eventId: string) => {
+    setSelectedUpcomingEvent(eventId);
+    const event = futureEvents.find((e) => e.id === eventId);
+    if (event) {
+      setFormData({
+        ...formData,
+        eventType: event.event_type || '',
+        recipientName: event.name,
+        date: event.date,
+      });
     }
   };
 
@@ -303,6 +369,55 @@ export default function AddGiftPage() {
               </FormControl>
             </Box>
 
+            {/* Event Source Selection - Only show when not in shared context */}
+            {!sharedContext && getAvailableEvents().length > 0 && (
+              <Box sx={{ mb: 3, p: 2, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
+                  {t('addGift.eventSource')}
+                </Typography>
+                <RadioGroup
+                  value={eventSource}
+                  onChange={(e) => handleEventSourceChange(e.target.value as 'manual' | 'upcoming')}
+                  row
+                >
+                  <FormControlLabel
+                    value="manual"
+                    control={<Radio />}
+                    label={t('addGift.manualEntry')}
+                  />
+                  <FormControlLabel
+                    value="upcoming"
+                    control={<Radio />}
+                    label={t('addGift.fromUpcomingEvents')}
+                  />
+                </RadioGroup>
+
+                {eventSource === 'upcoming' && (
+                  <Box sx={{ mt: 2 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>{t('addGift.selectUpcomingEvent')}</InputLabel>
+                      <Select
+                        value={selectedUpcomingEvent}
+                        label={t('addGift.selectUpcomingEvent')}
+                        onChange={(e) => handleUpcomingEventSelect(e.target.value)}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          },
+                        }}
+                      >
+                        {getAvailableEvents().map((event) => (
+                          <MenuItem key={event.id} value={event.id}>
+                            {event.name} {event.event_type ? `(${event.event_type})` : ''} - {new Date(event.date).toLocaleDateString()}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                )}
+              </Box>
+            )}
+
             <TextField
               fullWidth
               label={t('addGift.recipient')}
@@ -311,6 +426,7 @@ export default function AddGiftPage() {
                 setFormData({ ...formData, recipientName: e.target.value })
               }
               required
+              disabled={eventSource === 'upcoming' && selectedUpcomingEvent !== ''}
               sx={{ mb: 3 }}
             />
 
@@ -388,7 +504,20 @@ export default function AddGiftPage() {
                 {t('gift.eventType')}
               </Typography>
               
-              {sharedContext ? (
+              {eventSource === 'upcoming' && selectedUpcomingEvent ? (
+                <TextField
+                  fullWidth
+                  value={formData.eventType}
+                  disabled
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                  helperText={t('addGift.eventTypeFromUpcoming')}
+                />
+              ) : sharedContext ? (
                 // In shared context: only allow selecting from existing options
                 eventTypes.length > 0 ? (
                   <FormControl fullWidth>

@@ -31,24 +31,29 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import { supabase, Gift, FamilyMember } from '@/lib/supabase';
-import { format, parseISO, startOfMonth } from 'date-fns';
+import { supabase, Gift, FamilyMember, FutureEvent } from '@/lib/supabase';
+import { format, parseISO, startOfMonth, addDays, addWeeks, addMonths, isAfter, isBefore } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleIcon from '@mui/icons-material/People';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
+import EventIcon from '@mui/icons-material/Event';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { GrMoney } from "react-icons/gr";
+import { ToggleButton, ToggleButtonGroup, Chip as MuiChip } from '@mui/material';
 
 export default function AnalyticsPage() {
   const { user, loading: authLoading, sharedContext } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [futureEvents, setFutureEvents] = useState<FutureEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({});
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [eventsTimeframe, setEventsTimeframe] = useState<'week' | 'month'>('week');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -59,6 +64,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (user) {
       loadData();
+      loadFutureEvents();
       fetchExchangeRates();
     }
   }, [user, sharedContext]);
@@ -117,6 +123,22 @@ export default function AnalyticsPage() {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFutureEvents = async () => {
+    if (!user) return;
+    // Future events are NOT shareable - only show user's own events
+    if (sharedContext) return;
+    
+    try {
+      const response = await fetch(`/api/future-events?userId=${user.id}`);
+      const data = await response.json();
+      if (response.ok) {
+        setFutureEvents(data.events || []);
+      }
+    } catch (error) {
+      console.error('Error loading future events:', error);
     }
   };
 
@@ -624,6 +646,195 @@ export default function AnalyticsPage() {
             </Box>
           </Paper>
         </Box>
+
+        {/* Upcoming Events Section - Only show when not in shared context */}
+        {!sharedContext && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2, sm: 3 },
+              border: '1px solid rgba(0,0,0,0.08)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              borderRadius: 2,
+              mt: 4,
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EventIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                  }}
+                >
+                  {t('analytics.upcomingEvents')}
+                </Typography>
+              </Box>
+              <ToggleButtonGroup
+                value={eventsTimeframe}
+                exclusive
+                onChange={(e, newValue) => newValue && setEventsTimeframe(newValue)}
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2,
+                    py: 0.5,
+                    textTransform: 'none',
+                    fontSize: '0.875rem',
+                  },
+                }}
+              >
+                <ToggleButton value="week">{t('analytics.week')}</ToggleButton>
+                <ToggleButton value="month">{t('analytics.month')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {(() => {
+              const now = new Date();
+              const twoDaysAgo = addDays(now, -2);
+              const endDate = eventsTimeframe === 'week' ? addWeeks(now, 1) : addMonths(now, 1);
+
+              const upcomingEvents = futureEvents
+                .filter((event) => {
+                  const eventDate = parseISO(event.date);
+                  return isAfter(eventDate, twoDaysAgo) && isBefore(eventDate, endDate);
+                })
+                .sort((a, b) => {
+                  const dateA = parseISO(a.date);
+                  const dateB = parseISO(b.date);
+                  return dateA.getTime() - dateB.getTime();
+                });
+
+              if (upcomingEvents.length === 0) {
+                return (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <EventIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1, opacity: 0.5 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {t('analytics.noUpcomingEvents')}
+                    </Typography>
+                  </Box>
+                );
+              }
+
+              return (
+                <Box
+                  sx={{
+                    maxHeight: 400,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    pr: 1,
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        background: 'rgba(0,0,0,0.3)',
+                      },
+                    },
+                  }}
+                >
+                  {upcomingEvents.map((event) => {
+                    const eventDate = parseISO(event.date);
+                    const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    const isToday = daysUntil === 0;
+                    const isTomorrow = daysUntil === 1;
+                    const isPast = daysUntil < 0;
+
+                    return (
+                      <Card
+                        key={event.id}
+                        elevation={0}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: isToday ? 'warning.main' : isPast ? 'error.main' : 'divider',
+                          borderRadius: 2,
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            boxShadow: 2,
+                            borderColor: 'primary.main',
+                          },
+                          bgcolor: isToday ? 'warning.light' : isPast ? 'error.light' : 'background.paper',
+                        }}
+                      >
+                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {event.name}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
+                                <MuiChip
+                                  icon={<CalendarTodayIcon />}
+                                  label={format(eventDate, language === 'he' ? 'dd/MM/yyyy' : 'MMM dd, yyyy')}
+                                  size="small"
+                                  sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                />
+                                {event.event_type && (
+                                  <MuiChip
+                                    label={event.event_type}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                  />
+                                )}
+                                {isToday && (
+                                  <MuiChip
+                                    label={t('analytics.today')}
+                                    size="small"
+                                    color="warning"
+                                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                  />
+                                )}
+                                {isTomorrow && (
+                                  <MuiChip
+                                    label={t('analytics.tomorrow')}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                  />
+                                )}
+                                {!isToday && !isTomorrow && !isPast && (
+                                  <MuiChip
+                                    label={t('analytics.daysUntil').replace('{days}', daysUntil.toString())}
+                                    size="small"
+                                    color="info"
+                                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                  />
+                                )}
+                                {isPast && (
+                                  <MuiChip
+                                    label={t('analytics.pastEvent')}
+                                    size="small"
+                                    color="error"
+                                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
+                                  />
+                                )}
+                              </Box>
+                              {event.notes && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.875rem' }}>
+                                  {event.notes}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </Box>
+              );
+            })()}
+          </Paper>
+        )}
       </Container>
 
       {/* Error Snackbar */}
