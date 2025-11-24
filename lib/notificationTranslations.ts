@@ -75,46 +75,53 @@ export function getNotificationTranslation(params: NotificationTranslationParams
   const lang = params.language || 'he';
   const langTranslations = translations[lang] || translations.he;
   
-  const typeTranslations = langTranslations[params.type as keyof typeof langTranslations];
-  
-  if (!typeTranslations) {
-    // Fallback
-    return {
-      title: params.type,
-      content: '',
-    };
-  }
-
+  let title = '';
   let content = '';
   
   switch (params.type) {
-    case 'invite':
+    case 'invite': {
+      const typeTranslations = langTranslations.invite;
+      title = typeTranslations.title;
       content = typeTranslations.content(
         params.childName || 'Someone',
         params.permission === 'read' ? 'read' : 'read_write'
       );
       break;
-    case 'permission_update':
+    }
+    case 'permission_update': {
+      const typeTranslations = langTranslations.permission_update;
+      title = typeTranslations.title;
       content = typeTranslations.content(
         params.childName || 'The user',
         params.permission === 'read' ? 'read' : 'read_write'
       );
       break;
-    case 'revoked':
+    }
+    case 'revoked': {
+      const typeTranslations = langTranslations.revoked;
+      title = typeTranslations.title;
       content = typeTranslations.content(params.userName || 'Someone');
       break;
-    case 'viewed':
+    }
+    case 'viewed': {
+      const typeTranslations = langTranslations.viewed;
+      title = typeTranslations.title;
       content = typeTranslations.content(params.parentName || 'Someone');
       break;
-    case 'accepted':
+    }
+    case 'accepted': {
+      const typeTranslations = langTranslations.accepted;
+      title = typeTranslations.title;
       content = typeTranslations.content(params.parentName || 'Someone');
       break;
+    }
     default:
+      title = params.type;
       content = '';
   }
 
   return {
-    title: typeTranslations.title,
+    title,
     content,
   };
 }
