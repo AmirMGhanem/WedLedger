@@ -25,6 +25,7 @@ import CircleIcon from '@mui/icons-material/Circle';
 import { Notification } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 interface NotificationsProps {
   userId: string;
@@ -38,17 +39,20 @@ export default function Notifications({ userId }: NotificationsProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNewNotificationTooltip, setShowNewNotificationTooltip] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const newNotificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const open = Boolean(anchorEl);
 
-  const loadNotifications = async (showRefreshing = false) => {
+  const loadNotifications = async (showRefreshing = false): Promise<Notification[] | null> => {
     if (!userId) {
       console.warn('Notifications: No userId provided');
-      return;
+      return null;
     }
 
     if (showRefreshing) {
@@ -85,19 +89,36 @@ export default function Notifications({ userId }: NotificationsProps) {
         }
         setNotifications([]);
         setUnreadCount(0);
-        return;
+        return null;
       }
 
       console.log('Notifications loaded:', data.notifications?.length || 0, 'unread:', data.unreadCount || 0);
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
+      const newUnreadCount = data.unreadCount || 0;
+      const loadedNotifications = data.notifications || [];
+      
+      // Show tooltip if new notification arrived
+      if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
+        setShowNewNotificationTooltip(true);
+        if (newNotificationTimeoutRef.current) {
+          clearTimeout(newNotificationTimeoutRef.current);
+        }
+        newNotificationTimeoutRef.current = setTimeout(() => {
+          setShowNewNotificationTooltip(false);
+        }, 3000); // Show tooltip for 3 seconds
+      }
+      
+      setNotifications(loadedNotifications);
+      setUnreadCount(newUnreadCount);
+      setPreviousUnreadCount(newUnreadCount);
       setError(null);
+      return loadedNotifications;
     } catch (error: any) {
       console.error('Error loading notifications:', error);
       setError(error.message || 'Failed to load notifications');
       // Set empty state on error
       setNotifications([]);
       setUnreadCount(0);
+      return null;
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -118,6 +139,9 @@ export default function Notifications({ userId }: NotificationsProps) {
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
         }
+        if (newNotificationTimeoutRef.current) {
+          clearTimeout(newNotificationTimeoutRef.current);
+        }
       };
     } else {
       console.warn('Notifications: No userId available');
@@ -125,9 +149,49 @@ export default function Notifications({ userId }: NotificationsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleClick = async (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
-    loadNotifications();
+    
+    // Load notifications and mark as read after loading
+    const loadedNotifications = await loadNotifications();
+    
+    // Mark all notifications as read when opening the popover
+    if (loadedNotifications && loadedNotifications.length > 0) {
+      await markAllAsRead(loadedNotifications);
+    }
+  };
+
+  const markAllAsRead = async (notificationsToMark: Notification[] = notifications) => {
+    try {
+      // Mark all unread notifications as read
+      const unreadNotifications = notificationsToMark.filter(n => !n.read);
+      
+      if (unreadNotifications.length === 0) return;
+
+      // Update all unread notifications in parallel
+      const updatePromises = unreadNotifications.map((notification) =>
+        fetch(`/api/notifications/${notification.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            read: true,
+          }),
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
   const handleClose = () => {
@@ -165,7 +229,7 @@ export default function Notifications({ userId }: NotificationsProps) {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if unread
     if (!notification.read) {
       handleMarkAsRead(notification.id);
@@ -173,8 +237,28 @@ export default function Notifications({ userId }: NotificationsProps) {
 
     // Navigate based on notification type
     if (notification.type === 'invite' && notification.related_id) {
-      router.push(`/invite/${notification.related_id}`);
-      handleClose();
+      // Fetch the connection to get the invite token
+      try {
+        const { data: connection, error: connError } = await supabase
+          .from('user_connections')
+          .select('invite_token')
+          .eq('id', notification.related_id)
+          .single();
+
+        if (!connError && connection?.invite_token) {
+          router.push(`/invite/${connection.invite_token}`);
+          handleClose();
+        } else {
+          console.error('Error fetching invite token:', connError);
+          // Fallback: navigate to shared ledgers page
+          router.push('/shared-ledgers');
+          handleClose();
+        }
+      } catch (err) {
+        console.error('Error handling invite notification:', err);
+        router.push('/shared-ledgers');
+        handleClose();
+      }
     } else if (notification.type === 'connection') {
       // Navigate to family page for connection-related notifications
       router.push('/family');
@@ -196,7 +280,10 @@ export default function Notifications({ userId }: NotificationsProps) {
 
   return (
     <>
-      <Tooltip title={t('notifications.title')}>
+      <Tooltip 
+        title={showNewNotificationTooltip ? t('notifications.newNotification') : t('notifications.title')}
+        open={showNewNotificationTooltip || undefined}
+      >
         <IconButton
           color="inherit"
           onClick={handleClick}

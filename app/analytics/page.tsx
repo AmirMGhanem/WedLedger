@@ -32,7 +32,7 @@ import {
   Line,
 } from 'recharts';
 import { supabase, Gift, FamilyMember, FutureEvent } from '@/lib/supabase';
-import { format, parseISO, startOfMonth, addDays, addWeeks, addMonths, isAfter, isBefore } from 'date-fns';
+import { format, parseISO, startOfMonth, addDays, addWeeks, addMonths, isAfter, isBefore, isToday } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleIcon from '@mui/icons-material/People';
@@ -693,13 +693,13 @@ export default function AnalyticsPage() {
 
             {(() => {
               const now = new Date();
-              const twoDaysAgo = addDays(now, -2);
               const endDate = eventsTimeframe === 'week' ? addWeeks(now, 1) : addMonths(now, 1);
 
               const upcomingEvents = futureEvents
                 .filter((event) => {
                   const eventDate = parseISO(event.date);
-                  return isAfter(eventDate, twoDaysAgo) && isBefore(eventDate, endDate);
+                  // Only show future events (including today)
+                  return (isAfter(eventDate, now) || isToday(eventDate)) && isBefore(eventDate, endDate);
                 })
                 .sort((a, b) => {
                   const dateA = parseISO(a.date);

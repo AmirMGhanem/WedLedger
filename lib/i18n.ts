@@ -139,6 +139,7 @@ const resources = {
       'notifications.title': 'Notifications',
       'notifications.empty': 'No notifications',
       'notifications.refresh': 'Refresh',
+      'notifications.newNotification': 'New notification received',
       'notifications.viewAll': 'View All Notifications',
       'notifications.markAsRead': 'Mark as read',
       'notifications.markAsUnread': 'Mark as unread',
@@ -375,6 +376,7 @@ const resources = {
       'futureEvents.today': 'Today',
       'futureEvents.upcoming': 'Upcoming',
       'futureEvents.future': 'Future',
+      'futureEvents.showOnlyFuture': 'Show only future events',
     },
   },
   he: {
@@ -512,6 +514,7 @@ const resources = {
       'notifications.title': 'התראות',
       'notifications.empty': 'אין התראות',
       'notifications.refresh': 'רענן',
+      'notifications.newNotification': 'התקבלה התראה חדשה',
       'notifications.viewAll': 'צפה בכל ההתראות',
       'notifications.markAsRead': 'סמן כנקרא',
       'notifications.markAsUnread': 'סמן כלא נקרא',
@@ -564,6 +567,11 @@ const resources = {
       'addGift.errorSelectMember': 'אנא בחר בן משפחה',
       'addGift.errorSave': 'שמירת המתנה נכשלה',
       'addGift.saving': 'שומר...',
+      'addGift.eventSource': 'מקור האירוע',
+      'addGift.manualEntry': 'הזנה ידנית',
+      'addGift.fromUpcomingEvents': 'מאירועים עתידיים',
+      'addGift.selectUpcomingEvent': 'בחר אירוע עתידי',
+      'addGift.eventTypeFromUpcoming': 'סוג האירוע מולא מהאירוע העתידי שנבחר',
       
       // Family Page
       'family.title': 'בני משפחה',
@@ -743,6 +751,7 @@ const resources = {
       'futureEvents.today': 'היום',
       'futureEvents.upcoming': 'קרוב',
       'futureEvents.future': 'עתידי',
+      'futureEvents.showOnlyFuture': 'הצג רק אירועים עתידיים',
     },
   },
 };

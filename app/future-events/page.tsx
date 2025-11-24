@@ -23,6 +23,8 @@ import {
   Card,
   CardContent,
   CardActions,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -44,6 +46,7 @@ export default function FutureEventsPage() {
   const [editingEvent, setEditingEvent] = useState<FutureEvent | null>(null);
   const [saving, setSaving] = useState(false);
   const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const [showOnlyFuture, setShowOnlyFuture] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -226,17 +229,25 @@ export default function FutureEventsPage() {
   const getEventStatus = (dateString: string) => {
     const date = parseISO(dateString);
     if (isPast(date) && !isToday(date)) {
-      return { label: t('futureEvents.past'), color: 'default' as const };
+      return { label: t('futureEvents.past'), color: 'error' as const }; // Red for past events
     }
     if (isToday(date)) {
       return { label: t('futureEvents.today'), color: 'warning' as const };
     }
     const daysUntil = differenceInDays(date, new Date());
     if (daysUntil <= 7) {
-      return { label: t('futureEvents.upcoming'), color: 'error' as const };
+      return { label: t('futureEvents.upcoming'), color: 'success' as const }; // Green for upcoming
     }
     return { label: t('futureEvents.future'), color: 'primary' as const };
   };
+  
+  // Filter events based on showOnlyFuture toggle
+  const filteredEvents = showOnlyFuture
+    ? events.filter((event) => {
+        const eventDate = parseISO(event.date);
+        return isFuture(eventDate) || isToday(eventDate);
+      })
+    : events;
 
   const formatEventDate = (dateString: string) => {
     try {
@@ -263,12 +274,27 @@ export default function FutureEventsPage() {
     <AppLayout>
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            {t('futureEvents.title')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('futureEvents.description')}
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+                {t('futureEvents.title')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('futureEvents.description')}
+              </Typography>
+            </Box>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showOnlyFuture}
+                  onChange={(e) => setShowOnlyFuture(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={t('futureEvents.showOnlyFuture')}
+              sx={{ ml: 2 }}
+            />
+          </Box>
         </Box>
 
         {error && (
@@ -277,7 +303,7 @@ export default function FutureEventsPage() {
           </Alert>
         )}
 
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <Paper
             sx={{
               p: 6,
@@ -304,7 +330,7 @@ export default function FutureEventsPage() {
           </Paper>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {events.map((event) => {
+            {filteredEvents.map((event) => {
               const status = getEventStatus(event.date);
               return (
                 <Card
