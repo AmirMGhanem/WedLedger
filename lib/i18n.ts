@@ -105,6 +105,11 @@ const resources = {
       'sharedLedgers.errorPhoneRequired': 'Phone number is required',
       'sharedLedgers.errorGenerate': 'Failed to generate invite',
       'sharedLedgers.errorSendSMS': 'Failed to send SMS',
+      'sharedLedgers.pending': 'Pending',
+      'sharedLedgers.accepted': 'Accepted',
+      'sharedLedgers.viewInviteLink': 'View Invite Link',
+      'sharedLedgers.inviteSentOn': 'Invite sent on {date}',
+      'sharedLedgers.inviteLinkInfo': 'Share this invite link with the recipient. They can accept it to connect to your ledger.',
       
       // Invite Page
       'invite.connectionRequest': 'Connection Request',
@@ -401,6 +406,11 @@ const resources = {
       'sharedLedgers.errorPhoneRequired': 'מספר טלפון נדרש',
       'sharedLedgers.errorGenerate': 'יצירת ההזמנה נכשלה',
       'sharedLedgers.errorSendSMS': 'שליחת SMS נכשלה',
+      'sharedLedgers.pending': 'ממתין',
+      'sharedLedgers.accepted': 'מאושר',
+      'sharedLedgers.viewInviteLink': 'צפה בקישור ההזמנה',
+      'sharedLedgers.inviteSentOn': 'ההזמנה נשלחה ב-{date}',
+      'sharedLedgers.inviteLinkInfo': 'שתף את קישור ההזמנה הזה עם הנמען. הם יכולים לקבל אותו כדי להתחבר לפנקס שלך.',
       
       // Invite Page
       'invite.connectionRequest': 'בקשת חיבור',

@@ -33,6 +33,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
 import CheckIcon from '@mui/icons-material/Check';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase, UserConnection } from '@/lib/supabase';
 import AppLayout from '@/components/AppLayout';
@@ -56,6 +57,8 @@ export default function SharedLedgersPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [sharePermission, setSharePermission] = useState<'read' | 'read_write'>('read');
+  const [viewInviteDialogOpen, setViewInviteDialogOpen] = useState(false);
+  const [viewingConnection, setViewingConnection] = useState<UserConnection | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -91,6 +94,8 @@ export default function SharedLedgersPage() {
   };
 
   const handleOpenEditDialog = (connection: UserConnection) => {
+    // Only allow editing permissions for accepted connections
+    if (connection.status !== 'accepted') return;
     setEditingConnection(connection);
     setSelectedPermission(connection.permission);
     setEditDialogOpen(true);
@@ -158,6 +163,33 @@ export default function SharedLedgersPage() {
     } catch (err: any) {
       setError(err.message || t('sharedLedgers.errorRevoke'));
     }
+  };
+
+  const handleViewInviteLink = (connection: UserConnection) => {
+    if (!connection.invite_token) return;
+    
+    // Generate invite URL using BASEURL from environment or current origin
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'http://localhost:3000';
+    const inviteUrl = `${baseUrl}/invite/${connection.invite_token}`;
+    
+    setInviteUrl(inviteUrl);
+    setInviteToken(connection.invite_token);
+    setParentPhone(connection.parent_user?.phone || '');
+    setViewingConnection(connection);
+    setViewInviteDialogOpen(true);
+    setLinkCopied(false);
+    setSmsSent(false);
+  };
+
+  const handleCloseViewInviteDialog = () => {
+    setViewInviteDialogOpen(false);
+    setViewingConnection(null);
+    setInviteUrl('');
+    setInviteToken('');
+    setLinkCopied(false);
+    setSmsSent(false);
   };
 
   const handleOpenLinkDialog = () => {
@@ -351,15 +383,28 @@ export default function SharedLedgersPage() {
                   key={connection.id}
                   secondaryAction={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <IconButton
-                        edge="end"
-                        aria-label={t('sharedLedgers.editPermission')}
-                        onClick={() => handleOpenEditDialog(connection)}
-                        size="small"
-                        sx={{ color: '#667eea' }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+                      {connection.status === 'pending' && (
+                        <IconButton
+                          edge="end"
+                          aria-label={t('sharedLedgers.viewInviteLink')}
+                          onClick={() => handleViewInviteLink(connection)}
+                          size="small"
+                          sx={{ color: '#667eea' }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {connection.status === 'accepted' && (
+                        <IconButton
+                          edge="end"
+                          aria-label={t('sharedLedgers.editPermission')}
+                          onClick={() => handleOpenEditDialog(connection)}
+                          size="small"
+                          sx={{ color: '#667eea' }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
                       <IconButton
                         edge="end"
                         aria-label={t('sharedLedgers.revoke')}
@@ -376,7 +421,7 @@ export default function SharedLedgersPage() {
                     mb: 1,
                     bgcolor: 'background.default',
                     border: '1px solid #e5e7eb',
-                    pr: { xs: 8, sm: 10 },
+                    pr: { xs: connection.status === 'pending' ? 10 : 10, sm: connection.status === 'pending' ? 12 : 12 },
                     '&:hover': {
                       bgcolor: '#f9fafb',
                     },
@@ -384,21 +429,25 @@ export default function SharedLedgersPage() {
                 >
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant="body1" fontWeight={500}>
                           {connection.parent_user?.phone || t('sharedLedgers.unknownUser')}
                         </Typography>
                         <Chip
                           label={
-                            connection.permission === 'read'
-                              ? t('sharedLedgers.readOnly')
-                              : t('sharedLedgers.readWrite')
+                            connection.status === 'pending'
+                              ? t('sharedLedgers.pending')
+                              : connection.status === 'accepted'
+                              ? t('sharedLedgers.accepted')
+                              : connection.status
                           }
                           size="small"
                           color={
-                            connection.permission === 'read'
-                              ? 'default'
-                              : 'primary'
+                            connection.status === 'pending'
+                              ? 'warning'
+                              : connection.status === 'accepted'
+                              ? 'success'
+                              : 'default'
                           }
                           sx={{
                             height: 20,
@@ -406,12 +455,34 @@ export default function SharedLedgersPage() {
                             fontWeight: 500,
                           }}
                         />
+                        {connection.status === 'accepted' && (
+                          <Chip
+                            label={
+                              connection.permission === 'read'
+                                ? t('sharedLedgers.readOnly')
+                                : t('sharedLedgers.readWrite')
+                            }
+                            size="small"
+                            color={
+                              connection.permission === 'read'
+                                ? 'default'
+                                : 'primary'
+                            }
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                            }}
+                          />
+                        )}
                       </Box>
                     }
                     secondary={
                       <Typography variant="caption" color="text.secondary">
-                        {t('sharedLedgers.connectedOn')}{' '}
-                        {new Date(connection.created_at).toLocaleDateString()}
+                        {connection.status === 'pending'
+                          ? t('sharedLedgers.inviteSentOn').replace('{date}', new Date(connection.created_at).toLocaleDateString())
+                          : t('sharedLedgers.connectedOn')}{' '}
+                        {connection.status === 'accepted' && new Date(connection.created_at).toLocaleDateString()}
                       </Typography>
                     }
                   />
@@ -674,6 +745,168 @@ export default function SharedLedgersPage() {
                   {generating ? t('sharedLedgers.generating') : t('sharedLedgers.generateLink')}
                 </Button>
               )}
+            </DialogActions>
+          </Dialog>
+
+          {/* View Invite Link Dialog (for pending connections) */}
+          <Dialog
+            open={viewInviteDialogOpen}
+            onClose={handleCloseViewInviteDialog}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+              },
+            }}
+          >
+            <DialogTitle
+              sx={{
+                pb: 1,
+                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                fontWeight: 600,
+              }}
+            >
+              {t('sharedLedgers.viewInviteLink')}
+            </DialogTitle>
+            <DialogContent>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {inviteUrl && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+                    {t('sharedLedgers.inviteLinkInfo')}
+                  </Typography>
+
+                  {/* QR Code Section */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      mb: 3,
+                      p: 3,
+                      bgcolor: '#fafafa',
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                    }}
+                  >
+                    <QRCodeSVG
+                      value={inviteUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={true}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 2, textAlign: 'center' }}
+                    >
+                      {t('sharedLedgers.scanQR')}
+                    </Typography>
+                  </Box>
+
+                  {/* Link Section */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="caption"
+                      fontWeight={500}
+                      color="text.secondary"
+                      sx={{ mb: 1, display: 'block' }}
+                    >
+                      {t('sharedLedgers.orShareLink')}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'center',
+                        p: 1.5,
+                        bgcolor: '#f9fafb',
+                        borderRadius: 1,
+                        border: '1px solid #e5e7eb',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          wordBreak: 'break-all',
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          color: '#6b7280',
+                        }}
+                      >
+                        {inviteUrl}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={handleCopyLink}
+                        sx={{
+                          flexShrink: 0,
+                          color: linkCopied ? '#10b981' : '#6b7280',
+                        }}
+                      >
+                        {linkCopied ? (
+                          <CheckIcon fontSize="small" />
+                        ) : (
+                          <ContentCopyIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Box>
+                    {linkCopied && (
+                      <Typography
+                        variant="caption"
+                        sx={{ mt: 0.5, display: 'block', color: '#10b981' }}
+                      >
+                        {t('sharedLedgers.linkCopied')}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* SMS Section */}
+                  {viewingConnection && viewingConnection.parent_user?.phone && (
+                    <Box>
+                      <Button
+                        variant="outlined"
+                        startIcon={smsSent ? <CheckIcon /> : <SendIcon />}
+                        onClick={handleSendSMS}
+                        disabled={sendingSMS || !parentPhone}
+                        fullWidth
+                        sx={{
+                          borderRadius: 1,
+                          textTransform: 'none',
+                          borderColor: smsSent ? '#10b981' : undefined,
+                          color: smsSent ? '#10b981' : undefined,
+                        }}
+                      >
+                        {smsSent
+                          ? t('sharedLedgers.smsSent')
+                          : sendingSMS
+                          ? t('sharedLedgers.sending')
+                          : t('sharedLedgers.sendSMS')}
+                      </Button>
+                      {smsSent && (
+                        <Typography
+                          variant="caption"
+                          sx={{ mt: 0.5, display: 'block', textAlign: 'center', color: '#10b981' }}
+                        >
+                          {t('sharedLedgers.smsSentTo').replace('{phone}', parentPhone)}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2.5 }}>
+              <Button onClick={handleCloseViewInviteDialog} sx={{ borderRadius: 1, textTransform: 'none' }}>
+                {t('common.close')}
+              </Button>
             </DialogActions>
           </Dialog>
         </Paper>

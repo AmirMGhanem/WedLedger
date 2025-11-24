@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Get all accepted connections where this user is the child
+        // Get all connections where this user is the child (all statuses)
         const { data: connections, error: fetchError } = await supabase
             .from('user_connections')
             .select(`
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         parent_user:users!user_connections_parent_user_id_fkey(id, phone, created_at)
       `)
             .eq('child_user_id', childUserId)
-            .eq('status', 'accepted')
             .order('created_at', { ascending: false });
 
         if (fetchError) {
