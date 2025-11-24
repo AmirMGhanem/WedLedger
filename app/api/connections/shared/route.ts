@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       .from('user_connections')
       .select(`
         *,
-        child_user:users!user_connections_child_user_id_fkey(id, phone, created_at)
+        child_user:users!user_connections_child_user_id_fkey(id, phone, firstname, lastname, created_at)
       `)
       .eq('parent_user_id', parentUserId)
       .eq('status', 'accepted')

@@ -115,6 +115,7 @@ const resources = {
       'sharedLedgers.viewInviteLink': 'View Invite Link',
       'sharedLedgers.inviteSentOn': 'Invite sent on {date}',
       'sharedLedgers.inviteLinkInfo': 'Share this invite link with the recipient. They can accept it to connect to your ledger.',
+      'sharedLedgers.viewingAs': 'You are viewing as {name}',
       
       // Invite Page
       'invite.connectionRequest': 'Connection Request',
@@ -253,6 +254,8 @@ const resources = {
       'gift.giftTypePlaceholder': 'e.g., Cash, Jewelry',
       'gift.notes': 'Notes',
       'gift.notesPlaceholder': 'Add any additional notes here...',
+      'gift.noEventTypes': '{name} has not set up any event types yet. The event type field will be empty.',
+      'gift.noGiftTypes': '{name} has not set up any gift types yet. The gift type field will be empty.',
       
       // Settings
       'settings.title': 'Settings',
@@ -421,6 +424,7 @@ const resources = {
       'sharedLedgers.viewInviteLink': 'צפה בקישור ההזמנה',
       'sharedLedgers.inviteSentOn': 'ההזמנה נשלחה ב-{date}',
       'sharedLedgers.inviteLinkInfo': 'שתף את קישור ההזמנה הזה עם הנמען. הם יכולים לקבל אותו כדי להתחבר לפנקס שלך.',
+      'sharedLedgers.viewingAs': 'אתה צופה כ-{name}',
       
       // Invite Page
       'invite.connectionRequest': 'בקשת חיבור',
@@ -559,6 +563,8 @@ const resources = {
       'gift.giftTypePlaceholder': 'לדוגמה: מזומן, תכשיטים',
       'gift.notes': 'הערות',
       'gift.notesPlaceholder': 'הוסף הערות נוספות כאן...',
+      'gift.noEventTypes': '{name} עדיין לא הגדיר סוגי אירועים. שדה סוג האירוע יהיה ריק.',
+      'gift.noGiftTypes': '{name} עדיין לא הגדיר סוגי מתנות. שדה סוג המתנה יהיה ריק.',
       
       // Settings
       'settings.title': 'הגדרות',

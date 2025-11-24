@@ -202,7 +202,19 @@ export default function InvitePage() {
     return null;
   }
 
-  const childPhone = connection.child_user?.phone || 'Unknown';
+  // Helper function to get user display name
+  const getUserDisplayName = (userData: { firstname?: string; lastname?: string; phone?: string } | null | undefined) => {
+    if (!userData) return 'Unknown';
+    if (userData.firstname && userData.lastname) {
+      return `${userData.firstname} ${userData.lastname} (${userData.phone})`;
+    }
+    if (userData.firstname) {
+      return `${userData.firstname} (${userData.phone})`;
+    }
+    return userData.phone || 'Unknown';
+  };
+
+  const childDisplayName = getUserDisplayName(connection.child_user);
 
   return (
     <AppLayout>
@@ -220,7 +232,7 @@ export default function InvitePage() {
             {t('invite.connectionRequest')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            {t('invite.shareRequest').replace('{name}', childPhone)}
+            {t('invite.shareRequest').replace('{name}', childDisplayName)}
           </Typography>
 
           {connection.isExpired && (

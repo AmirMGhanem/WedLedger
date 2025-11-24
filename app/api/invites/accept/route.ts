@@ -135,8 +135,8 @@ export async function GET(request: NextRequest) {
       .from('user_connections')
       .select(`
         *,
-        parent_user:users!user_connections_parent_user_id_fkey(id, phone),
-        child_user:users!user_connections_child_user_id_fkey(id, phone)
+        parent_user:users!user_connections_parent_user_id_fkey(id, phone, firstname, lastname),
+        child_user:users!user_connections_child_user_id_fkey(id, phone, firstname, lastname)
       `)
       .eq('invite_token', token)
       .maybeSingle();

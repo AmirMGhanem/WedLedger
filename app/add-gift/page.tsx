@@ -53,6 +53,7 @@ export default function AddGiftPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [childUser, setChildUser] = useState<{ firstname?: string; lastname?: string } | null>(null);
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -89,6 +90,19 @@ export default function AddGiftPage() {
     const targetUserId = sharedContext?.childUserId || user.id;
     
     try {
+      // If in shared context, fetch child user info
+      if (sharedContext) {
+        const { data: childUserData } = await supabase
+          .from('users')
+          .select('firstname, lastname')
+          .eq('id', sharedContext.childUserId)
+          .single();
+        
+        if (childUserData) {
+          setChildUser(childUserData);
+        }
+      }
+
       const [familyResult, eventResult, giftTypeResult] = await Promise.all([
         supabase
           .from('family_members')
@@ -138,16 +152,16 @@ export default function AddGiftPage() {
         return;
       }
 
-      // Save new event type if it doesn't exist
-      if (formData.eventType && !eventTypes.find(et => et.name === formData.eventType)) {
+      // Save new event type if it doesn't exist (only if not in shared context)
+      if (!sharedContext && formData.eventType && !eventTypes.find(et => et.name === formData.eventType)) {
         await supabase.from('event_types').insert({
           user_id: targetUserId,
           name: formData.eventType,
         });
       }
 
-      // Save new gift type if it doesn't exist
-      if (formData.giftType && !giftTypes.find(gt => gt.name === formData.giftType)) {
+      // Save new gift type if it doesn't exist (only if not in shared context)
+      if (!sharedContext && formData.giftType && !giftTypes.find(gt => gt.name === formData.giftType)) {
         await supabase.from('gift_types').insert({
           user_id: targetUserId,
           name: formData.giftType,
@@ -374,28 +388,60 @@ export default function AddGiftPage() {
                 {t('gift.eventType')}
               </Typography>
               
-              <Autocomplete
-                freeSolo
-                options={eventTypes.map(et => et.name)}
-                value={formData.eventType}
-                onChange={(e, newValue) => {
-                  setFormData({ ...formData, eventType: newValue || '' });
-                }}
-                onInputChange={(e, newValue) => {
-                  setFormData({ ...formData, eventType: newValue });
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={t('gift.eventTypePlaceholder')}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      }
-                    }}
-                  />
-                )}
-              />
+              {sharedContext ? (
+                // In shared context: only allow selecting from existing options
+                eventTypes.length > 0 ? (
+                  <FormControl fullWidth>
+                    <InputLabel>{t('gift.eventType')}</InputLabel>
+                    <Select
+                      value={formData.eventType}
+                      label={t('gift.eventType')}
+                      onChange={(e) => {
+                        setFormData({ ...formData, eventType: e.target.value });
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    >
+                      {eventTypes.map((et) => (
+                        <MenuItem key={et.id} value={et.name}>
+                          {et.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    {t('gift.noEventTypes').replace('{name}', childUser?.firstname || sharedContext.childPhone)}
+                  </Alert>
+                )
+              ) : (
+                // Not in shared context: allow free text
+                <Autocomplete
+                  freeSolo
+                  options={eventTypes.map(et => et.name)}
+                  value={formData.eventType}
+                  onChange={(e, newValue) => {
+                    setFormData({ ...formData, eventType: newValue || '' });
+                  }}
+                  onInputChange={(e, newValue) => {
+                    setFormData({ ...formData, eventType: newValue });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={t('gift.eventTypePlaceholder')}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    />
+                  )}
+                />
+              )}
             </Box>
 
             {/* Gift Type */}
@@ -411,28 +457,60 @@ export default function AddGiftPage() {
                 {t('gift.giftType')}
               </Typography>
               
-              <Autocomplete
-                freeSolo
-                options={giftTypes.map(gt => gt.name)}
-                value={formData.giftType}
-                onChange={(e, newValue) => {
-                  setFormData({ ...formData, giftType: newValue || '' });
-                }}
-                onInputChange={(e, newValue) => {
-                  setFormData({ ...formData, giftType: newValue });
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={t('gift.giftTypePlaceholder')}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      }
-                    }}
-                  />
-                )}
-              />
+              {sharedContext ? (
+                // In shared context: only allow selecting from existing options
+                giftTypes.length > 0 ? (
+                  <FormControl fullWidth>
+                    <InputLabel>{t('gift.giftType')}</InputLabel>
+                    <Select
+                      value={formData.giftType}
+                      label={t('gift.giftType')}
+                      onChange={(e) => {
+                        setFormData({ ...formData, giftType: e.target.value });
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    >
+                      {giftTypes.map((gt) => (
+                        <MenuItem key={gt.id} value={gt.name}>
+                          {gt.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    {t('gift.noGiftTypes').replace('{name}', childUser?.firstname || sharedContext.childPhone)}
+                  </Alert>
+                )
+              ) : (
+                // Not in shared context: allow free text
+                <Autocomplete
+                  freeSolo
+                  options={giftTypes.map(gt => gt.name)}
+                  value={formData.giftType}
+                  onChange={(e, newValue) => {
+                    setFormData({ ...formData, giftType: newValue || '' });
+                  }}
+                  onInputChange={(e, newValue) => {
+                    setFormData({ ...formData, giftType: newValue });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={t('gift.giftTypePlaceholder')}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    />
+                  )}
+                />
+              )}
             </Box>
 
             {/* Notes */}

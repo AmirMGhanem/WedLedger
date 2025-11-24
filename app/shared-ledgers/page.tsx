@@ -42,6 +42,18 @@ export default function SharedLedgersPage() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
+
+  // Helper function to get user display name
+  const getUserDisplayName = (userData: { firstname?: string; lastname?: string; phone?: string } | null | undefined) => {
+    if (!userData) return t('sharedLedgers.unknownUser');
+    if (userData.firstname && userData.lastname) {
+      return `${userData.firstname} ${userData.lastname} (${userData.phone})`;
+    }
+    if (userData.firstname) {
+      return `${userData.firstname} (${userData.phone})`;
+    }
+    return userData.phone || t('sharedLedgers.unknownUser');
+  };
   const [connections, setConnections] = useState<UserConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -314,9 +326,38 @@ export default function SharedLedgersPage() {
     );
   }
 
+  // Get current user display name
+  const getCurrentUserDisplayName = () => {
+    if (!user?.user_metadata) return user?.phone || '';
+    const { firstname, lastname } = user.user_metadata;
+    if (firstname && lastname) {
+      return `${firstname} ${lastname}`;
+    }
+    if (firstname) return firstname;
+    return user.user_metadata.phone || user?.phone || '';
+  };
+
   return (
     <AppLayout>
       <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
+        {/* Top Bar - You are viewing */}
+        <Alert
+          severity="info"
+          sx={{
+            mb: 3,
+            borderRadius: 2,
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            '& .MuiAlert-icon': {
+              color: '#2563eb',
+            },
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {t('sharedLedgers.viewingAs').replace('{name}', getCurrentUserDisplayName())}
+          </Typography>
+        </Alert>
+
         <Paper
           elevation={0}
           sx={{
@@ -431,7 +472,7 @@ export default function SharedLedgersPage() {
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant="body1" fontWeight={500}>
-                          {connection.parent_user?.phone || t('sharedLedgers.unknownUser')}
+                          {getUserDisplayName(connection.parent_user)}
                         </Typography>
                         <Chip
                           label={
@@ -513,7 +554,7 @@ export default function SharedLedgersPage() {
               )}
 
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t('sharedLedgers.editPermissionDescription').replace('{user}', editingConnection?.parent_user?.phone || t('sharedLedgers.thisUser'))}
+                {t('sharedLedgers.editPermissionDescription').replace('{user}', getUserDisplayName(editingConnection?.parent_user) || t('sharedLedgers.thisUser'))}
               </Typography>
 
               <FormControl fullWidth sx={{ mt: 2 }}>

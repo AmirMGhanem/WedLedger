@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
             .from('user_connections')
             .select(`
         *,
-        parent_user:users!user_connections_parent_user_id_fkey(id, phone, created_at)
+        parent_user:users!user_connections_parent_user_id_fkey(id, phone, firstname, lastname, created_at)
       `)
             .eq('child_user_id', childUserId)
             .order('created_at', { ascending: false });

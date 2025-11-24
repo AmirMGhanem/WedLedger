@@ -69,6 +69,7 @@ export default function DashboardPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [giftTypes, setGiftTypes] = useState<GiftType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [childUser, setChildUser] = useState<{ firstname?: string; lastname?: string } | null>(null);
   
   // Filter, sort, and search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,6 +118,18 @@ export default function DashboardPage() {
     const targetUserId = sharedContext?.childUserId || user.id;
     
     try {
+      // If in shared context, fetch child user info
+      if (sharedContext) {
+        const { data: childUserData } = await supabase
+          .from('users')
+          .select('firstname, lastname')
+          .eq('id', sharedContext.childUserId)
+          .single();
+        
+        if (childUserData) {
+          setChildUser(childUserData);
+        }
+      }
       // Build gifts query with filters
       let giftsQuery = supabase
         .from('gifts')
@@ -325,16 +338,16 @@ export default function DashboardPage() {
         return;
       }
 
-      // Save new event type if it doesn't exist
-      if (editFormData.eventType && !eventTypes.find(et => et.name === editFormData.eventType)) {
+      // Save new event type if it doesn't exist (only if not in shared context)
+      if (!sharedContext && editFormData.eventType && !eventTypes.find(et => et.name === editFormData.eventType)) {
         await supabase.from('event_types').insert({
           user_id: targetUserId,
           name: editFormData.eventType,
         });
       }
 
-      // Save new gift type if it doesn't exist
-      if (editFormData.giftType && !giftTypes.find(gt => gt.name === editFormData.giftType)) {
+      // Save new gift type if it doesn't exist (only if not in shared context)
+      if (!sharedContext && editFormData.giftType && !giftTypes.find(gt => gt.name === editFormData.giftType)) {
         await supabase.from('gift_types').insert({
           user_id: targetUserId,
           name: editFormData.giftType,
@@ -1122,20 +1135,47 @@ export default function DashboardPage() {
                 <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
                   {t('gift.eventType')}
                 </Typography>
-                <Autocomplete
-                  freeSolo
-                  options={eventTypes.map(et => et.name)}
-                  value={editFormData.eventType}
-                  onChange={(e, newValue) => {
-                    setEditFormData({ ...editFormData, eventType: newValue || '' });
-                  }}
-                  onInputChange={(e, newValue) => {
-                    setEditFormData({ ...editFormData, eventType: newValue });
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} placeholder={t('gift.eventTypePlaceholder')} />
-                  )}
-                />
+                {sharedContext ? (
+                  // In shared context: only allow selecting from existing options
+                  eventTypes.length > 0 ? (
+                    <FormControl fullWidth>
+                      <InputLabel>{t('gift.eventType')}</InputLabel>
+                      <Select
+                        value={editFormData.eventType}
+                        label={t('gift.eventType')}
+                        onChange={(e) => {
+                          setEditFormData({ ...editFormData, eventType: e.target.value });
+                        }}
+                      >
+                        {eventTypes.map((et) => (
+                          <MenuItem key={et.id} value={et.name}>
+                            {et.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Alert severity="info">
+                      {t('gift.noEventTypes').replace('{name}', childUser?.firstname || sharedContext.childPhone)}
+                    </Alert>
+                  )
+                ) : (
+                  // Not in shared context: allow free text
+                  <Autocomplete
+                    freeSolo
+                    options={eventTypes.map(et => et.name)}
+                    value={editFormData.eventType}
+                    onChange={(e, newValue) => {
+                      setEditFormData({ ...editFormData, eventType: newValue || '' });
+                    }}
+                    onInputChange={(e, newValue) => {
+                      setEditFormData({ ...editFormData, eventType: newValue });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder={t('gift.eventTypePlaceholder')} />
+                    )}
+                  />
+                )}
               </Box>
 
               {/* Gift Type */}
@@ -1143,20 +1183,47 @@ export default function DashboardPage() {
                 <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary' }}>
                   {t('gift.giftType')}
                 </Typography>
-                <Autocomplete
-                  freeSolo
-                  options={giftTypes.map(gt => gt.name)}
-                  value={editFormData.giftType}
-                  onChange={(e, newValue) => {
-                    setEditFormData({ ...editFormData, giftType: newValue || '' });
-                  }}
-                  onInputChange={(e, newValue) => {
-                    setEditFormData({ ...editFormData, giftType: newValue });
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} placeholder={t('gift.giftTypePlaceholder')} />
-                  )}
-                />
+                {sharedContext ? (
+                  // In shared context: only allow selecting from existing options
+                  giftTypes.length > 0 ? (
+                    <FormControl fullWidth>
+                      <InputLabel>{t('gift.giftType')}</InputLabel>
+                      <Select
+                        value={editFormData.giftType}
+                        label={t('gift.giftType')}
+                        onChange={(e) => {
+                          setEditFormData({ ...editFormData, giftType: e.target.value });
+                        }}
+                      >
+                        {giftTypes.map((gt) => (
+                          <MenuItem key={gt.id} value={gt.name}>
+                            {gt.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Alert severity="info">
+                      {t('gift.noGiftTypes').replace('{name}', childUser?.firstname || sharedContext.childPhone)}
+                    </Alert>
+                  )
+                ) : (
+                  // Not in shared context: allow free text
+                  <Autocomplete
+                    freeSolo
+                    options={giftTypes.map(gt => gt.name)}
+                    value={editFormData.giftType}
+                    onChange={(e, newValue) => {
+                      setEditFormData({ ...editFormData, giftType: newValue || '' });
+                    }}
+                    onInputChange={(e, newValue) => {
+                      setEditFormData({ ...editFormData, giftType: newValue });
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder={t('gift.giftTypePlaceholder')} />
+                    )}
+                  />
+                )}
               </Box>
 
               {/* Notes */}

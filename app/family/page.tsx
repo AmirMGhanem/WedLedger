@@ -34,6 +34,18 @@ export default function FamilyPage() {
   const { user, loading: authLoading, setSharedContext } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
+
+  // Helper function to get user display name
+  const getUserDisplayName = (userData: { firstname?: string; lastname?: string; phone?: string } | null | undefined) => {
+    if (!userData) return 'Unknown';
+    if (userData.firstname && userData.lastname) {
+      return `${userData.firstname} ${userData.lastname} (${userData.phone})`;
+    }
+    if (userData.firstname) {
+      return `${userData.firstname} (${userData.phone})`;
+    }
+    return userData.phone || 'Unknown';
+  };
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -415,7 +427,7 @@ export default function FamilyPage() {
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography variant="body1" fontWeight={500}>
-                            {connection.child_user?.phone || 'Unknown'}
+                            {getUserDisplayName(connection.child_user)}
                           </Typography>
                           <Chip
                             label={
