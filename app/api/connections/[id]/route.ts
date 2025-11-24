@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getNotificationTranslation } from '@/lib/notificationTranslations';
 
 /**
  * PATCH /api/connections/[id]
@@ -12,7 +13,7 @@ export async function PATCH(
   try {
     const connectionId = params.id;
     const body = await request.json();
-    const { childUserId, permission } = body;
+    const { childUserId, permission, language } = body; // language: 'he' | 'en'
 
     if (!childUserId || typeof childUserId !== 'string') {
       return NextResponse.json(
@@ -28,10 +29,14 @@ export async function PATCH(
       );
     }
 
-    // Verify the connection belongs to this child
+    // Verify the connection belongs to this child and get parent info
     const { data: connection, error: fetchError } = await supabase
       .from('user_connections')
-      .select('*')
+      .select(`
+        *,
+        parent_user:users!user_connections_parent_user_id_fkey(id, firstname, lastname, phone),
+        child_user:users!user_connections_child_user_id_fkey(id, firstname, lastname, phone)
+      `)
       .eq('id', connectionId)
       .eq('child_user_id', childUserId)
       .eq('status', 'accepted')
@@ -69,6 +74,48 @@ export async function PATCH(
       );
     }
 
+    // Send notification to parent about permission change
+    try {
+      const childDisplayName = connection.child_user?.firstname && connection.child_user?.lastname
+        ? `${connection.child_user.firstname} ${connection.child_user.lastname}`
+        : connection.child_user?.firstname
+        ? connection.child_user.firstname
+        : connection.child_user?.phone || 'The user';
+
+      // Get translated notification content
+      const userLanguage = (language === 'en' || language === 'he') ? language : 'he';
+      const notificationText = getNotificationTranslation({
+        type: 'permission_update',
+        language: userLanguage,
+        childName: childDisplayName,
+        permission: permission as 'read' | 'read_write',
+      });
+
+      const { data: notificationData, error: notifError } = await supabase.from('notifications').insert({
+        user_id: connection.parent_user_id,
+        title: notificationText.title,
+        content: notificationText.content,
+        type: 'permission_update',
+        related_id: connectionId,
+        read: false,
+      }).select().single();
+
+      if (notifError) {
+        console.error('Error creating permission update notification:', {
+          error: notifError,
+          code: notifError.code,
+          message: notifError.message,
+          details: notifError.details,
+          userId: connection.parent_user_id,
+        });
+      } else {
+        console.log('Permission update notification created successfully:', notificationData?.id);
+      }
+    } catch (notifError) {
+      console.error('Exception creating permission update notification:', notifError);
+      // Don't fail the request if notification creation fails
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Connection updated successfully',
@@ -93,7 +140,7 @@ export async function DELETE(
   try {
     const connectionId = params.id;
     const body = await request.json();
-    const { userId, role } = body; // role: 'parent' or 'child'
+    const { userId, role, language } = body; // role: 'parent' or 'child', language: 'he' | 'en'
 
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json(
@@ -109,10 +156,14 @@ export async function DELETE(
       );
     }
 
-    // Verify the connection belongs to this user
+    // Verify the connection belongs to this user and get both user info
     const query = supabase
       .from('user_connections')
-      .select('*')
+      .select(`
+        *,
+        parent_user:users!user_connections_parent_user_id_fkey(id, firstname, lastname, phone),
+        child_user:users!user_connections_child_user_id_fkey(id, firstname, lastname, phone)
+      `)
       .eq('id', connectionId);
 
     if (role === 'parent') {
@@ -150,6 +201,63 @@ export async function DELETE(
         { error: 'Failed to delete connection' },
         { status: 500 }
       );
+    }
+
+    // Send notification to the other user about connection being revoked
+    try {
+      let recipientUserId: string;
+      let senderDisplayName: string;
+
+      if (role === 'parent') {
+        // Parent revoked, notify child
+        recipientUserId = connection.child_user_id;
+        senderDisplayName = connection.parent_user?.firstname && connection.parent_user?.lastname
+          ? `${connection.parent_user.firstname} ${connection.parent_user.lastname}`
+          : connection.parent_user?.firstname
+          ? connection.parent_user.firstname
+          : connection.parent_user?.phone || 'The user';
+      } else {
+        // Child revoked, notify parent
+        recipientUserId = connection.parent_user_id;
+        senderDisplayName = connection.child_user?.firstname && connection.child_user?.lastname
+          ? `${connection.child_user.firstname} ${connection.child_user.lastname}`
+          : connection.child_user?.firstname
+          ? connection.child_user.firstname
+          : connection.child_user?.phone || 'The user';
+      }
+
+      // Get translated notification content
+      const userLanguage = (language === 'en' || language === 'he') ? language : 'he';
+      const notificationText = getNotificationTranslation({
+        type: 'revoked',
+        language: userLanguage,
+        userName: senderDisplayName,
+      });
+
+      const { data: notificationData, error: notifError } = await supabase.from('notifications').insert({
+        user_id: recipientUserId,
+        title: notificationText.title,
+        content: notificationText.content,
+        type: 'revoked',
+        related_id: connectionId,
+        read: false,
+      }).select().single();
+
+      if (notifError) {
+        console.error('Error creating revoke notification:', {
+          error: notifError,
+          code: notifError.code,
+          message: notifError.message,
+          details: notifError.details,
+          userId: recipientUserId,
+          role: role,
+        });
+      } else {
+        console.log('Revoke notification created successfully:', notificationData?.id, 'for user:', recipientUserId);
+      }
+    } catch (notifError) {
+      console.error('Exception creating revoke notification:', notifError);
+      // Don't fail the request if notification creation fails
     }
 
     return NextResponse.json({

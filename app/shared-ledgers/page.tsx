@@ -40,7 +40,7 @@ import AppLayout from '@/components/AppLayout';
 
 export default function SharedLedgersPage() {
   const { user, loading: authLoading } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
 
   // Helper function to get user display name
@@ -131,6 +131,7 @@ export default function SharedLedgersPage() {
         body: JSON.stringify({
           childUserId: user.id,
           permission: selectedPermission,
+          language: language, // Pass user's language preference
         }),
       });
 
@@ -162,6 +163,7 @@ export default function SharedLedgersPage() {
         body: JSON.stringify({
           userId: user.id,
           role: 'child',
+          language: language, // Pass user's language preference
         }),
       });
 
@@ -244,6 +246,7 @@ export default function SharedLedgersPage() {
           childUserId: user.id,
           parentPhone: parentPhone.trim(),
           permission: sharePermission,
+          language: language, // Pass user's language preference
         }),
       });
 
@@ -739,36 +742,38 @@ export default function SharedLedgersPage() {
                     )}
                   </Box>
 
-                  {/* SMS Section */}
-                  <Box>
-                    <Button
-                      variant="outlined"
-                      startIcon={smsSent ? <CheckIcon /> : <SendIcon />}
-                      onClick={handleSendSMS}
-                      disabled={sendingSMS || !parentPhone}
-                      fullWidth
-                      sx={{
-                        borderRadius: 1,
-                        textTransform: 'none',
-                        borderColor: smsSent ? '#10b981' : undefined,
-                        color: smsSent ? '#10b981' : undefined,
-                      }}
-                    >
-                      {smsSent
-                        ? t('sharedLedgers.smsSent')
-                        : sendingSMS
-                        ? t('sharedLedgers.sending')
-                        : t('sharedLedgers.sendSMS')}
-                    </Button>
-                    {smsSent && (
-                      <Typography
-                        variant="caption"
-                        sx={{ mt: 0.5, display: 'block', textAlign: 'center', color: '#10b981' }}
+                  {/* SMS Section - Hidden for now, notifications are used instead */}
+                  {false && (
+                    <Box>
+                      <Button
+                        variant="outlined"
+                        startIcon={smsSent ? <CheckIcon /> : <SendIcon />}
+                        onClick={handleSendSMS}
+                        disabled={sendingSMS || !parentPhone}
+                        fullWidth
+                        sx={{
+                          borderRadius: 1,
+                          textTransform: 'none',
+                          borderColor: smsSent ? '#10b981' : undefined,
+                          color: smsSent ? '#10b981' : undefined,
+                        }}
                       >
-                        {t('sharedLedgers.smsSentTo').replace('{phone}', parentPhone)}
-                      </Typography>
-                    )}
-                  </Box>
+                        {smsSent
+                          ? t('sharedLedgers.smsSent')
+                          : sendingSMS
+                          ? t('sharedLedgers.sending')
+                          : t('sharedLedgers.sendSMS')}
+                      </Button>
+                      {smsSent && (
+                        <Typography
+                          variant="caption"
+                          sx={{ mt: 0.5, display: 'block', textAlign: 'center', color: '#10b981' }}
+                        >
+                          {t('sharedLedgers.smsSentTo').replace('{phone}', parentPhone)}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
                 </>
               )}
             </DialogContent>
@@ -909,8 +914,8 @@ export default function SharedLedgersPage() {
                     )}
                   </Box>
 
-                  {/* SMS Section */}
-                  {viewingConnection && viewingConnection.parent_user?.phone && (
+                  {/* SMS Section - Hidden for now, notifications are used instead */}
+                  {false && viewingConnection?.parent_user?.phone && (
                     <Box>
                       <Button
                         variant="outlined"

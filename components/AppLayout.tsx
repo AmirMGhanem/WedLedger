@@ -36,6 +36,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import Notifications from './Notifications';
 
 const DRAWER_WIDTH = 280;
 
@@ -355,6 +356,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   : t('app.editMode')}
               </Typography>
             </Box>
+          )}
+          
+          {user?.id && (
+            <Notifications userId={user.id} />
           )}
           
           <Button

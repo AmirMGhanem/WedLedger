@@ -72,3 +72,15 @@ export type UserConnection = {
   parent_user?: User;
   child_user?: User;
 };
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  type: 'system' | 'invite' | 'connection' | 'gift';
+  related_id?: string;
+  read: boolean;
+  created_at: string;
+  updated_at: string;
+};

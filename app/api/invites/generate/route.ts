@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
+import { getNotificationTranslation } from '@/lib/notificationTranslations';
 
 /**
  * POST /api/invites/generate
@@ -9,7 +10,7 @@ import { randomUUID } from 'crypto';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { childUserId, parentPhone, permission } = body;
+    const { childUserId, parentPhone, permission, language } = body; // language: 'he' | 'en'
 
     // Validate inputs
     if (!childUserId || typeof childUserId !== 'string') {
@@ -111,6 +112,55 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL || 
       (request.headers.get('origin') || 'http://localhost:3000');
     const inviteUrl = `${baseUrl}/invite/${inviteToken}`;
+
+    // Create notification for the parent user
+    try {
+      // Get child user info for notification
+      const { data: childUser } = await supabase
+        .from('users')
+        .select('firstname, lastname, phone')
+        .eq('id', childUserId)
+        .single();
+
+      const childDisplayName = childUser?.firstname && childUser?.lastname
+        ? `${childUser.firstname} ${childUser.lastname}`
+        : childUser?.firstname
+        ? childUser.firstname
+        : childUser?.phone || 'Someone';
+
+      // Get translated notification content
+      const userLanguage = (language === 'en' || language === 'he') ? language : 'he';
+      const notificationText = getNotificationTranslation({
+        type: 'invite',
+        language: userLanguage,
+        childName: childDisplayName,
+        permission: permission as 'read' | 'read_write',
+      });
+
+      const { data: notificationData, error: notifError } = await supabase.from('notifications').insert({
+        user_id: parentUser.id,
+        title: notificationText.title,
+        content: notificationText.content,
+        type: 'invite',
+        related_id: connection.id, // Use connection ID instead of token
+        read: false,
+      }).select().single();
+
+      if (notifError) {
+        console.error('Error creating invite notification:', {
+          error: notifError,
+          code: notifError.code,
+          message: notifError.message,
+          details: notifError.details,
+          userId: parentUser.id,
+        });
+      } else {
+        console.log('Invite notification created successfully:', notificationData?.id);
+      }
+    } catch (notifError) {
+      console.error('Exception creating invite notification:', notifError);
+      // Don't fail the request if notification creation fails
+    }
 
     return NextResponse.json({
       success: true,

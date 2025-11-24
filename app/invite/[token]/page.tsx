@@ -38,7 +38,7 @@ type InviteConnection = {
 
 export default function InvitePage() {
   const { user, loading: authLoading } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const params = useParams();
   const token = params?.token as string;
@@ -102,6 +102,7 @@ export default function InvitePage() {
         body: JSON.stringify({
           token: connection.invite_token,
           parentUserId: user.id,
+          language: language, // Pass user's language preference
         }),
       });
 

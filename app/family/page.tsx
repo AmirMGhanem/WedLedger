@@ -32,7 +32,7 @@ import AppLayout from '@/components/AppLayout';
 
 export default function FamilyPage() {
   const { user, loading: authLoading, setSharedContext } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
 
   // Helper function to get user display name
@@ -210,6 +210,7 @@ export default function FamilyPage() {
         body: JSON.stringify({
           userId: user.id,
           role: 'parent',
+          language: language, // Pass user's language preference
         }),
       });
 
@@ -224,8 +225,27 @@ export default function FamilyPage() {
     }
   };
 
-  const handleViewChildLedger = (connection: UserConnection) => {
+  const handleViewChildLedger = async (connection: UserConnection) => {
     if (!user) return;
+    
+    // Send notification to child that parent is viewing
+    try {
+      await fetch('/api/connections/view', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parentUserId: user.id,
+          childUserId: connection.child_user_id,
+          connectionId: connection.id,
+          language: language, // Pass user's language preference
+        }),
+      });
+    } catch (error) {
+      console.error('Error sending view notification:', error);
+      // Don't block navigation if notification fails
+    }
     
     // Set shared context to view child's ledger
     setSharedContext({

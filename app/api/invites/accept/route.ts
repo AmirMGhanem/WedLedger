@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getNotificationTranslation } from '@/lib/notificationTranslations';
 
 /**
  * POST /api/invites/accept
@@ -8,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, parentUserId } = body;
+    const { token, parentUserId, language } = body; // language: 'he' | 'en'
 
     // Validate inputs
     if (!token || typeof token !== 'string') {
@@ -95,9 +96,57 @@ export async function POST(request: NextRequest) {
     // Get child user info for response
     const { data: childUser } = await supabase
       .from('users')
-      .select('id, phone')
+      .select('id, phone, firstname, lastname')
       .eq('id', connection.child_user_id)
       .single();
+
+    // Get parent user info for notification
+    const { data: parentUser } = await supabase
+      .from('users')
+      .select('id, phone, firstname, lastname')
+      .eq('id', connection.parent_user_id)
+      .single();
+
+    // Send notification to child that parent accepted the invite
+    try {
+      const parentDisplayName = parentUser?.firstname && parentUser?.lastname
+        ? `${parentUser.firstname} ${parentUser.lastname}`
+        : parentUser?.firstname
+        ? parentUser.firstname
+        : parentUser?.phone || 'Someone';
+
+      // Get translated notification content
+      const userLanguage = (language === 'en' || language === 'he') ? language : 'he';
+      const notificationText = getNotificationTranslation({
+        type: 'accepted',
+        language: userLanguage,
+        parentName: parentDisplayName,
+      });
+
+      const { data: notificationData, error: notifError } = await supabase.from('notifications').insert({
+        user_id: connection.child_user_id,
+        title: notificationText.title,
+        content: notificationText.content,
+        type: 'accepted',
+        related_id: updatedConnection.id,
+        read: false,
+      }).select().single();
+
+      if (notifError) {
+        console.error('Error creating accept notification:', {
+          error: notifError,
+          code: notifError.code,
+          message: notifError.message,
+          details: notifError.details,
+          userId: connection.child_user_id,
+        });
+      } else {
+        console.log('Accept notification created successfully:', notificationData?.id);
+      }
+    } catch (notifError) {
+      console.error('Exception creating accept notification:', notifError);
+      // Don't fail the request if notification creation fails
+    }
 
     return NextResponse.json({
       success: true,
