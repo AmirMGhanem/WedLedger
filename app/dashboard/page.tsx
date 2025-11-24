@@ -994,10 +994,14 @@ export default function DashboardPage() {
             <Button
               variant="contained"
               startIcon={<EditIcon />}
-              onClick={() => {
-                setPreviewOpen(false);
+              onClick={(e) => {
+                e.stopPropagation();
                 if (selectedGift) {
-                  handleEditClick({} as React.MouseEvent, selectedGift);
+                  const giftToEdit = selectedGift;
+                  setPreviewOpen(false);
+                  setTimeout(() => {
+                    handleEditClick(e, giftToEdit);
+                  }, 100);
                 }
               }}
               sx={{ borderRadius: 2 }}
