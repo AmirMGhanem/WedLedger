@@ -13,10 +13,16 @@ import {
   Typography,
   Box,
   Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState('050');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phone, setPhone] = useState(''); // Combined phone for API calls
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp' | 'register'>('phone');
   const [error, setError] = useState('');
@@ -25,16 +31,34 @@ export default function LoginPage() {
   const [lastname, setLastname] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const { signInWithOtp, verifyOtp, updateProfile } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
+
+  const phonePrefixes = ['050', '052', '054', '053', '058', '059'];
+
+  // Update combined phone when prefix or number changes
+  const updatePhone = (prefix: string, number: string) => {
+    const combined = prefix + number;
+    setPhone(combined);
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate phone number (exactly 7 digits)
+    if (phoneNumber.length !== 7 || !/^\d+$/.test(phoneNumber)) {
+      setError(t('login.errorPhoneInvalid'));
+      return;
+    }
+
+    // Combine prefix and number
+    const combinedPhone = phonePrefix + phoneNumber;
+    setPhone(combinedPhone);
     setLoading(true);
 
     try {
-      await signInWithOtp(phone);
+      await signInWithOtp(combinedPhone);
       setStep('otp');
     } catch (err: any) {
       setError(err.message || t('login.errorSendOtp'));
@@ -179,35 +203,97 @@ export default function LoginPage() {
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp}>
-              <TextField
-                fullWidth
-                label={t('login.phoneLabel')}
-                placeholder={t('login.phonePlaceholder')}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
+              <Box 
                 sx={{ 
+                  display: 'flex', 
+                  gap: 1, 
                   mb: 3,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
-                    backgroundColor: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#e5e7eb',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#d1d5db',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#667eea',
-                      borderWidth: '1px',
-                    },
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#667eea',
-                  },
+                  direction: 'ltr', // Force LTR for phone input
+                  flexDirection: 'row', // Ensure prefix is on the left
                 }}
-                autoFocus
-              />
+              >
+                <FormControl
+                  sx={{
+                    minWidth: 100,
+                    direction: 'ltr', // Force LTR
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1,
+                      backgroundColor: '#ffffff',
+                      '& fieldset': {
+                        borderColor: '#e5e7eb',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#d1d5db',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#667eea',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#667eea',
+                    },
+                  }}
+                >
+                  <InputLabel sx={{ direction: 'ltr' }}>{t('login.phonePrefix')}</InputLabel>
+                  <Select
+                    value={phonePrefix}
+                    label={t('login.phonePrefix')}
+                    onChange={(e) => {
+                      setPhonePrefix(e.target.value);
+                      updatePhone(e.target.value, phoneNumber);
+                    }}
+                    sx={{ direction: 'ltr' }}
+                  >
+                    {phonePrefixes.map((prefix) => (
+                      <MenuItem key={prefix} value={prefix} sx={{ direction: 'ltr' }}>
+                        {prefix}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label={t('login.phoneNumber')}
+                  placeholder={t('login.phoneNumberPlaceholder')}
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    // Only allow digits and limit to 7
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 7);
+                    setPhoneNumber(value);
+                    updatePhone(phonePrefix, value);
+                  }}
+                  required
+                  sx={{ 
+                    direction: 'ltr', // Force LTR
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1,
+                      backgroundColor: '#ffffff',
+                      '& fieldset': {
+                        borderColor: '#e5e7eb',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#d1d5db',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#667eea',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#667eea',
+                    },
+                  }}
+                  autoFocus
+                  inputProps={{
+                    maxLength: 7,
+                    pattern: '[0-9]*',
+                    inputMode: 'numeric',
+                    dir: 'ltr', // Force LTR for input
+                  }}
+                  helperText={t('login.phoneNumberHelper')}
+                />
+              </Box>
 
               <Button
                 type="submit"
@@ -300,6 +386,8 @@ export default function LoginPage() {
                     setStep('phone');
                     setOtp('');
                     setError('');
+                    setPhoneNumber('');
+                    setPhone('');
                   }}
                   disabled={loading}
                   sx={{

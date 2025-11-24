@@ -29,6 +29,10 @@ const resources = {
       'login.title': 'Sign in to WedLedger',
       'login.phoneLabel': 'Phone Number',
       'login.phonePlaceholder': '+1234567890',
+      'login.phonePrefix': 'Prefix',
+      'login.phoneNumber': 'Phone Number',
+      'login.phoneNumberPlaceholder': '1234567',
+      'login.phoneNumberHelper': 'Enter 7 digits',
       'login.sendOtp': 'Send OTP',
       'login.sending': 'Sending...',
       'login.otpLabel': 'Enter OTP',
@@ -40,6 +44,7 @@ const resources = {
       'login.testingOtp': 'Testing OTP:',
       'login.errorSendOtp': 'Failed to send OTP. Please try again.',
       'login.errorInvalidOtp': 'Invalid OTP. Please check the code and try again.',
+      'login.errorPhoneInvalid': 'Please enter exactly 7 digits',
       
       // Registration
       'register.title': 'Complete Your Profile',
@@ -330,6 +335,10 @@ const resources = {
       'login.title': 'התחבר לפנקס חתונה',
       'login.phoneLabel': 'מספר טלפון',
       'login.phonePlaceholder': '+972501234567',
+      'login.phonePrefix': 'קידומת',
+      'login.phoneNumber': 'מספר טלפון',
+      'login.phoneNumberPlaceholder': '1234567',
+      'login.phoneNumberHelper': 'הכנס 7 ספרות',
       'login.sendOtp': 'שלח קוד',
       'login.sending': 'שולח...',
       'login.otpLabel': 'הזן קוד',
@@ -341,6 +350,7 @@ const resources = {
       'login.testingOtp': 'קוד לבדיקה:',
       'login.errorSendOtp': 'שליחת הקוד נכשלה. נסה שוב.',
       'login.errorInvalidOtp': 'קוד לא תקין. אנא בדוק את הקוד ונסה שוב.',
+      'login.errorPhoneInvalid': 'אנא הכנס בדיוק 7 ספרות',
       
       // Registration
       'register.title': 'השלם את הפרופיל שלך',
